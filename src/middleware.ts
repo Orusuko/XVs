@@ -32,5 +32,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/events/:path*', '/api/families/:path*'],
+  matcher: ['/admin/:path*', '/auth/callback', '/api/events/:path*', '/api/families/:path*'],
 };

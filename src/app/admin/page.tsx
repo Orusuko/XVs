@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { FormularioAcceso } from '@/components/admin/FormularioAcceso';
+import { AvisoErrorAuth } from '@/components/auth/AvisoErrorAuth';
 import type { EventRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ export default async function AdminPage() {
             Entra para preparar la invitación
           </h1>
           <div className="mt-8">
+            <AvisoErrorAuth />
             <FormularioAcceso />
           </div>
         </div>
