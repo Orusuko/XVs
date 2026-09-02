@@ -53,6 +53,8 @@ export function TalonQr({ qr, familia, boletos, descargarAlAparecer = false }: P
 
       <div className="perforado mt-6 pt-6">
         {imagen ? (
+          // Data URL generated in the browser; there is nothing for the image optimizer to fetch.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imagen}
             alt={`Código QR de acceso de la familia ${familia}`}
