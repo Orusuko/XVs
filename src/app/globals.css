@@ -1,26 +1,121 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Design direction: "talón de boleto".
+  The spec says the QR behaves like a cinema ticket, so the invitation is built
+  as a printed ticket — dyed paper, plum ink, old gold foil, a perforated stub
+  around the QR, and monospaced digits for anything countable.
+*/
+
+@theme {
+  --color-papel: #f4ecf1;
+  --color-papel-alto: #fbf6f9;
+  --color-tinta: #2a1424;
+  --color-tinta-suave: #6b4a60;
+  --color-vino: #7b2d5e;
+  --color-vino-hondo: #55193f;
+  --color-oro: #a97722;
+  --color-oro-claro: #d9b25f;
+  --color-salvia: #64775f;
+  --color-borde: #dcc5d5;
+  --color-alerta: #b3261e;
+  --color-exito: #2f6b46;
+
+  --font-display: var(--font-fraunces), "Times New Roman", serif;
+  --font-script: var(--font-great-vibes), cursive;
+  --font-body: var(--font-karla), system-ui, sans-serif;
+  --font-ticket: var(--font-space-mono), ui-monospace, monospace;
+
+  --radius-hoja: 2px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Paper grain. Cheap, static, and keeps flat fills from reading as plastic. */
+.textura-papel {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(169, 119, 34, 0.05) 0, transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(123, 45, 94, 0.06) 0, transparent 46%);
+}
+
+/* The signature element: a torn-off ticket stub. */
+.talon {
+  position: relative;
+  background: var(--color-papel-alto);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-hoja);
+}
+
+.talon::before,
+.talon::after {
+  content: "";
+  position: absolute;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--color-papel);
+  border: 1px solid var(--color-borde);
+}
+
+.talon::before {
+  left: -10px;
+  clip-path: inset(0 0 0 50%);
+}
+
+.talon::after {
+  right: -10px;
+  clip-path: inset(0 50% 0 0);
+}
+
+.perforado {
+  border-top: 1px dashed var(--color-borde);
+}
+
+/* Entrance choreography, one orchestrated pass on load. */
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.surgir {
+  animation: surgir 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.surgir-1 { animation-delay: 60ms; }
+.surgir-2 { animation-delay: 150ms; }
+.surgir-3 { animation-delay: 240ms; }
+.surgir-4 { animation-delay: 330ms; }
+.surgir-5 { animation-delay: 420ms; }
+
+:focus-visible {
+  outline: 2px solid var(--color-vino);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
