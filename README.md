@@ -49,6 +49,28 @@ openssl rand -base64 48
 npm run dev
 ```
 
+## Auth del organizador (Supabase)
+
+El panel (`/admin`) entra con un código enviado por correo (`signInWithOtp`). Hay tres ajustes que **solo se hacen en el dashboard**; el repo no puede cambiarlos:
+
+1. **Authentication → URL Configuration → Site URL**  
+   En local: `http://localhost:3000`. En producción: la URL de Vercel (`https://….vercel.app` o el dominio propio). Si Site URL queda en localhost, los correos de producción redirigen a localhost.
+
+2. **Authentication → URL Configuration → Redirect URLs**  
+   `emailRedirectTo` se ignora si la URL no está en esta lista. Agrega **todas** estas (sin barra final de más):
+   - `http://localhost:3000/auth/callback`
+   - `http://localhost:3000/auth/callback?next=/admin`
+   - `https://TU-PROYECTO.vercel.app/auth/callback`
+   - `https://TU-PROYECTO.vercel.app/auth/callback?next=/admin`  
+   Si usas un dominio custom, también `https://tudominio.com/auth/callback` y la variante con `?next=/admin`.
+
+3. **Authentication → Email Templates → Magic Link**  
+   Pega la plantilla de [`docs/supabase-email-magic-link.md`](./docs/supabase-email-magic-link.md) para que el correo muestre `{{ .Token }}` (el código de 6 dígitos) y un enlace a `/auth/callback` con `token_hash` — no a la página «Sign In» de Supabase.
+
+**Cómo entrar:** pide el código en `/admin` y **escríbelo en el formulario**. No pulses «Sign In» en supabase.co. Gmail y otros clientes a menudo abren el enlace mágico al escanear el correo y lo dejan en `otp_expired`.
+
+Si pruebas en `localhost`, el correo **debe** abrir `http://localhost:3000/auth/callback`. Eso es correcto. El fallo es la página alojada de Sign In, no localhost durante el desarrollo.
+
 ## Comandos
 
 | Comando | Qué hace |
@@ -61,7 +83,7 @@ npm run dev
 
 ## Cómo se usa
 
-**Organizador.** Entra en `/admin` con un enlace mágico enviado a su correo. Captura los datos del evento, agrega familia por familia con su número de boletos y guarda. En la vista de invitados aparece el enlace único de cada familia, con botón para copiar o compartir por WhatsApp, y la columna de asistencia se actualiza sola conforme llegan las confirmaciones. Más abajo crea los PIN del personal de puerta.
+**Organizador.** Entra en `/admin` con un código enviado a su correo. Captura los datos del evento, agrega familia por familia con su número de boletos y guarda. En la vista de invitados aparece el enlace único de cada familia, con botón para copiar o compartir por WhatsApp, y la columna de asistencia se actualiza sola conforme llegan las confirmaciones. Más abajo crea los PIN del personal de puerta.
 
 **Familia.** Abre su enlace, ve la invitación con su nombre, puede guardar el PDF y agendar misa y recepción. Al confirmar, se descarga su pase con QR. Puede cambiar de opinión: cada nuevo "sí" genera un pase nuevo y anula el anterior.
 

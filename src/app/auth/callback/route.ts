@@ -1,21 +1,34 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import {
+  htmlRescateHashAuth,
+  mapSupabaseAuthError,
+  parseAuthCallbackUrl,
+  tiposOtpParaTokenHash,
+  urlRedireccionAuth,
+  type EmailOtpType,
+} from '@/lib/auth/callback';
 
 /**
- * Completes the magic-link PKCE handshake. The verifier lives in this
- * browser's cookies, which is why the email link only works on the same
- * device that requested it.
+ * Completes organizer login from the email:
+ * - `code` → PKCE exchange (same-browser cookies)
+ * - `token_hash` + `type` → server-side verifyOtp (skips the hosted Sign In page)
+ * - query/hash errors → /admin?error=otp_expired|auth
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') ?? '/admin';
-  const destino = new URL(next.startsWith('/') ? next : '/admin', url.origin);
+  const parsed = parseAuthCallbackUrl(request.url);
 
-  if (!code) {
-    destino.searchParams.set('error', 'auth');
-    return NextResponse.redirect(destino);
+  if (parsed.kind === 'error') {
+    return NextResponse.redirect(urlRedireccionAuth(url.origin, parsed.next, parsed.codigo));
+  }
+
+  if (parsed.kind === 'missing') {
+    // Fragments like #error=otp_expired never reach this server.
+    return new NextResponse(htmlRescateHashAuth(), {
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    });
   }
 
   const cookieStore = await cookies();
@@ -36,12 +49,29 @@ export async function GET(request: Request) {
     },
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    destino.searchParams.set('error', 'auth');
-    return NextResponse.redirect(destino);
+  if (parsed.kind === 'pkce') {
+    const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
+    if (error) {
+      return NextResponse.redirect(
+        urlRedireccionAuth(url.origin, parsed.next, mapSupabaseAuthError(error)),
+      );
+    }
+    return NextResponse.redirect(urlRedireccionAuth(url.origin, parsed.next));
   }
 
-  return NextResponse.redirect(destino);
+  let ultimoError: { message?: string; code?: string } | null = null;
+  for (const type of tiposOtpParaTokenHash(parsed.type)) {
+    const { error } = await supabase.auth.verifyOtp({
+      type: type as EmailOtpType,
+      token_hash: parsed.tokenHash,
+    });
+    if (!error) {
+      return NextResponse.redirect(urlRedireccionAuth(url.origin, parsed.next));
+    }
+    ultimoError = error;
+  }
+
+  return NextResponse.redirect(
+    urlRedireccionAuth(url.origin, parsed.next, mapSupabaseAuthError(ultimoError)),
+  );
 }

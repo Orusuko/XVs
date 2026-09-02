@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { AvisoErrorAuth } from '@/components/auth/AvisoErrorAuth';
+import { PuenteAuthInicio } from '@/components/auth/PuenteAuthInicio';
 
 export default function Home() {
   return (
     <main className="textura-papel flex min-h-screen flex-col items-center justify-center px-6 py-16 text-center">
+      <PuenteAuthInicio />
       <AvisoErrorAuth />
 
       <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">
