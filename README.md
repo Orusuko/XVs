@@ -51,7 +51,19 @@ npm run dev
 
 ## Auth del organizador (Supabase)
 
-El panel (`/admin`) entra con un código enviado por correo (`signInWithOtp`). Hay tres ajustes que **solo se hacen en el dashboard**; el repo no puede cambiarlos:
+El panel (`/admin`) entra con **correo y contraseña**. El código por correo queda como alternativa.
+
+Para probar ya (tres clics en el dashboard):
+
+1. **Authentication → Providers → Email** — desactiva **Confirm email**. En una app de un solo evento no hace falta confirmar el correo; si queda activo, `signUp` no deja sesión y el usuario queda bloqueado.
+2. **(Opcional, lo más rápido si el registro está limitado)** **Authentication → Users → Add user** — crea el correo con contraseña y deja el usuario auto-confirmado.
+3. Entra en `/admin` con ese correo y contraseña.
+
+Si **Crear cuenta** responde con límite de envíos (rate limit), el login con contraseña de un usuario **ya existente** sigue funcionando. Es probable que ya tengas usuarios de intentos OTP anteriores: abre **Authentication → Users**, elige el correo y restablece la contraseña, o crea uno nuevo con **Add user**.
+
+### Código por correo (opcional)
+
+En `/admin` hay un enlace «Usar código por correo». Esos ajustes **solo se hacen en el dashboard**; el repo no puede cambiarlos:
 
 1. **Authentication → URL Configuration → Site URL**  
    En local: `http://localhost:3000`. En producción: la URL de Vercel (`https://….vercel.app` o el dominio propio). Si Site URL queda en localhost, los correos de producción redirigen a localhost.
@@ -67,9 +79,7 @@ El panel (`/admin`) entra con un código enviado por correo (`signInWithOtp`). H
 3. **Authentication → Email Templates → Magic Link**  
    Pega la plantilla de [`docs/supabase-email-magic-link.md`](./docs/supabase-email-magic-link.md) para que el correo muestre `{{ .Token }}` (el código de 6 dígitos) y un enlace a `/auth/callback` con `token_hash` — no a la página «Sign In» de Supabase.
 
-**Cómo entrar:** pide el código en `/admin` y **escríbelo en el formulario**. No pulses «Sign In» en supabase.co. Gmail y otros clientes a menudo abren el enlace mágico al escanear el correo y lo dejan en `otp_expired`.
-
-Si pruebas en `localhost`, el correo **debe** abrir `http://localhost:3000/auth/callback`. Eso es correcto. El fallo es la página alojada de Sign In, no localhost durante el desarrollo.
+Si usas el código: escríbelo en el formulario. No pulses «Sign In» en supabase.co. Gmail a menudo abre el enlace mágico al escanear el correo y lo deja en `otp_expired`. En `localhost`, el correo **debe** abrir `http://localhost:3000/auth/callback`; el fallo es la página alojada de Sign In, no localhost.
 
 ## Comandos
 
@@ -83,7 +93,7 @@ Si pruebas en `localhost`, el correo **debe** abrir `http://localhost:3000/auth/
 
 ## Cómo se usa
 
-**Organizador.** Entra en `/admin` con un código enviado a su correo. Captura los datos del evento, agrega familia por familia con su número de boletos y guarda. En la vista de invitados aparece el enlace único de cada familia, con botón para copiar o compartir por WhatsApp, y la columna de asistencia se actualiza sola conforme llegan las confirmaciones. Más abajo crea los PIN del personal de puerta.
+**Organizador.** Entra en `/admin` con correo y contraseña. Captura los datos del evento, agrega familia por familia con su número de boletos y guarda. En la vista de invitados aparece el enlace único de cada familia, con botón para copiar o compartir por WhatsApp, y la columna de asistencia se actualiza sola conforme llegan las confirmaciones. Más abajo crea los PIN del personal de puerta.
 
 **Familia.** Abre su enlace, ve la invitación con su nombre, puede guardar el PDF y agendar misa y recepción. Al confirmar, se descarga su pase con QR. Puede cambiar de opinión: cada nuevo "sí" genera un pase nuevo y anula el anterior.
 

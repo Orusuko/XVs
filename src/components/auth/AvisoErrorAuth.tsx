@@ -38,14 +38,14 @@ export function AvisoErrorAuth() {
       <p className="font-display text-xl text-tinta">Ese enlace ya no sirve</p>
       <p className="mt-2 text-sm text-tinta-suave">
         {tipo === 'otp_expired'
-          ? 'Caducó o alguien lo abrió antes que tú (Gmail a veces lo hace al escanear el correo). Pide un código nuevo y escríbelo a mano: no pulses el enlace ni la página de Sign In.'
-          : 'No pudimos completar el acceso. Pide un código nuevo e introdúcelo en el panel.'}
+          ? 'Caducó o alguien lo abrió antes que tú (Gmail a veces lo hace al escanear el correo). Entra con correo y contraseña, o pide un código nuevo y escríbelo a mano: no pulses el enlace ni la página de Sign In.'
+          : 'No pudimos completar el acceso. Entra con correo y contraseña, o pide un código nuevo e introdúcelo en el panel.'}
       </p>
       <Link
         href="/admin"
         className="mt-5 inline-flex min-h-11 cursor-pointer items-center text-sm text-vino underline underline-offset-4"
       >
-        Ir al panel e introducir el código
+        Ir al panel e entrar con contraseña
       </Link>
     </div>
   );
