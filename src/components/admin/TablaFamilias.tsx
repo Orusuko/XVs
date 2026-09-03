@@ -76,6 +76,22 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
     0,
   );
 
+  async function quitarFamilia(familia: Familia) {
+    const confirma = window.confirm(`¿Quitar a la familia ${familia.nombre_familia} de la lista?`);
+    if (!confirma) return;
+
+    setError(null);
+    const respuesta = await fetch(`/api/families?id=${familia.id}`, { method: 'DELETE' });
+
+    if (!respuesta.ok) {
+      const datos = await respuesta.json().catch(() => null);
+      setError(datos?.error ?? 'No pudimos quitar a esa familia.');
+      return;
+    }
+
+    setFamilias((previas) => previas.filter((actual) => actual.id !== familia.id));
+  }
+
   async function guardarBorradores() {
     const listas = borradores
       .filter((fila) => fila.nombre_familia.trim() !== '' && Number(fila.boletos_total) > 0)
@@ -223,6 +239,7 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
               <th className="pb-3 font-normal">Boletos</th>
               <th className="pb-3 font-normal">Asistencia</th>
               <th className="pb-3 font-normal">Invitación</th>
+              <th className="pb-3 font-normal" />
             </tr>
           </thead>
           <tbody>
@@ -241,7 +258,7 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
                       <button
                         type="button"
                         onClick={() => navigator.clipboard.writeText(enlace)}
-                        className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                        className="inline-flex h-11 cursor-pointer items-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
                       >
                         Copiar enlace
                       </button>
@@ -251,11 +268,20 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
                         )}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="min-h-11 cursor-pointer text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
+                        className="inline-flex h-11 cursor-pointer items-center text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
                       >
                         WhatsApp
                       </a>
                     </div>
+                  </td>
+                  <td className="py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => quitarFamilia(familia)}
+                      className="inline-flex h-11 cursor-pointer items-center text-alerta underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                    >
+                      Quitar
+                    </button>
                   </td>
                 </tr>
               );
@@ -263,6 +289,8 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
           </tbody>
         </table>
       </div>
+
+      {error && <p className="mt-3 text-sm text-alerta">{error}</p>}
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Boton variante="contorno" onClick={() => setCapturando(true)}>

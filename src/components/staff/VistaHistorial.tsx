@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
+import { EstadoHoja } from '@/components/ui/EstadoHoja';
 
 export function VistaHistorial({ eventId }: { eventId: string }) {
   const { estado, error, refrescar } = useEstadoStaff(eventId);
@@ -46,8 +47,21 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
     await refrescar();
   }
 
-  if (error) return <p className="p-6 text-center text-oro-claro">{error}</p>;
-  if (!estado) return <p className="p-6 text-center text-papel/60">Cargando…</p>;
+  if (error) {
+    return (
+      <EstadoHoja tono="tinta" etiqueta="Historial" titulo="Se cortó la sesión" detalle={error} />
+    );
+  }
+  if (!estado) {
+    return (
+      <EstadoHoja
+        tono="tinta"
+        etiqueta="Historial"
+        titulo="Buscando familias"
+        detalle="Un momento, estamos pidiendo la lista confirmada."
+      />
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">
@@ -74,7 +88,12 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
       )}
 
       {busqueda.trim() !== '' && coincidencias.length === 0 && (
-        <p className="mt-6 text-papel/60">Ninguna familia confirmada coincide con esa búsqueda.</p>
+        <EstadoHoja
+          tono="tinta"
+          compacto
+          titulo="Nadie coincide"
+          detalle="Ninguna familia confirmada tiene ese apellido. Revisa la ortografía."
+        />
       )}
 
       <ul className="mt-4 divide-y divide-papel/10">
@@ -114,7 +133,12 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
       <h2 className="mt-12 font-display text-xl text-papel">Últimas entradas</h2>
 
       {estado.ingresados.length === 0 ? (
-        <p className="mt-3 text-papel/60">Todavía no hay entradas registradas.</p>
+        <EstadoHoja
+          tono="tinta"
+          compacto
+          titulo="Sin entradas todavía"
+          detalle="Cuando escaneen el primer boleto, aparece en esta lista."
+        />
       ) : (
         <ul className="mt-3 divide-y divide-papel/10">
           {estado.ingresados.slice(0, 15).map((familia) => (

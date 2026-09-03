@@ -23,11 +23,14 @@ export function DescargarPdf({ invitacion, qr }: Props) {
     setError(null);
 
     try {
-      const [{ pdf }, { InvitationPdf }, qrDataUrl] = await Promise.all([
+      const [{ pdf }, { InvitationPdf }, { registrarFuentes }, qrDataUrl] = await Promise.all([
         import('@react-pdf/renderer'),
         import('@/lib/pdf/InvitationPdf'),
+        import('@/lib/pdf/fuentes'),
         qr ? renderQrDataUrl(qr) : Promise.resolve(undefined),
       ]);
+
+      registrarFuentes();
 
       const blob = await pdf(<InvitationPdf invitacion={invitacion} qrDataUrl={qrDataUrl} />).toBlob();
       const url = URL.createObjectURL(blob);

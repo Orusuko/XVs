@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { Boton } from '@/components/ui/Boton';
 import { TIPOS_OTP_CORREO, tokenAccesoListo } from '@/lib/auth/callback';
-import { MENSAJE_SCRIPT } from '@/lib/auth/crear-organizador-cli';
 import { MENSAJES_ACCESO, mensajeErrorAcceso } from '@/lib/auth/mensajes';
 
 const CAMPO =
@@ -299,12 +298,6 @@ export function FormularioAcceso() {
 
       {error && <p className="mt-3 text-sm text-alerta">{error}</p>}
       {aviso && <p className="mt-3 text-sm text-tinta-suave">{aviso}</p>}
-
-      <p className="mt-3 text-sm text-tinta-suave">
-        Si no tienes usuario o el correo está bloqueado, no esperes el email: en la raíz del repo
-        corre <span className="font-ticket text-[11px]">{MENSAJE_SCRIPT}</span> y vuelve a pulsar
-        Entrar.
-      </p>
 
       <button
         type="button"

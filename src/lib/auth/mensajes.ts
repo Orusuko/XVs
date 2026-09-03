@@ -1,5 +1,3 @@
-import { MENSAJE_SCRIPT } from '@/lib/auth/crear-organizador-cli';
-
 export type ErrorAcceso = {
   message?: string;
   code?: string;
@@ -8,31 +6,18 @@ export type ErrorAcceso = {
 
 export const MENSAJES_ACCESO = {
   credenciales:
-    'Correo o contraseña incorrectos. Si no tienes usuario confirmado, corre el script: ' +
-    MENSAJE_SCRIPT,
+    'Correo o contraseña incorrectos. Si acabas de crear la cuenta, pide que te confirmen el acceso.',
   confirmarCorreo:
-    'Ese correo aún no está confirmado. No esperes el email: corre el script ' +
-    '(email_confirm queda en true aunque Confirm email siga activo): ' +
-    MENSAJE_SCRIPT,
+    'Ese correo aún no está listo. Escribe a quien armó el panel para que lo active.',
   signupSinSesion:
-    'La cuenta se creó, pero Supabase pide confirmar el correo. Corre el script y entra con esa contraseña: ' +
-    MENSAJE_SCRIPT,
-  limite:
-    'Supabase está limitando los envíos de correo. No uses «Crear cuenta» ni el código. Corre el script y entra aquí: ' +
-    MENSAJE_SCRIPT,
-  yaExiste:
-    'Ese correo ya tiene cuenta. Entra con la contraseña, o restablécela corriendo el script: ' +
-    MENSAJE_SCRIPT,
+    'La cuenta se creó. Falta confirmar el correo antes de entrar; escribe a quien armó el panel.',
+  limite: 'Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo.',
+  yaExiste: 'Ese correo ya tiene cuenta. Entra con su contraseña o pide que te la restablezcan.',
   debil: 'La contraseña debe tener al menos 8 caracteres.',
-  registroDesactivado:
-    'El registro está desactivado. Corre el script para crear el usuario: ' + MENSAJE_SCRIPT,
+  registroDesactivado: 'El registro está desactivado. Pide a quien armó el panel que te dé acceso.',
   correoInvalido: 'Ese correo no es válido. Usa una dirección real.',
-  otpCaducado:
-    'Ese código no es válido o ya caducó. Entra con correo y contraseña, o corre el script: ' +
-    MENSAJE_SCRIPT,
-  generico:
-    'No pudimos completar el acceso. Si no puedes entrar, corre el script y usa esa contraseña: ' +
-    MENSAJE_SCRIPT,
+  otpCaducado: 'Ese código no es válido o ya caducó. Entra con correo y contraseña, o pide uno nuevo.',
+  generico: 'No pudimos completar el acceso. Revisa correo y contraseña, o pide un código nuevo.',
 } as const;
 
 function textoError(error: ErrorAcceso): { code: string; message: string; status: number } {

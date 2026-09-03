@@ -54,7 +54,11 @@ export async function POST(request: Request) {
   const { data, error } = await db.from('families').insert(filas).select('id, token, nombre_familia');
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('families.insert', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos guardar. Revisa los datos e inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ familias: data }, { status: 201 });
@@ -91,7 +95,11 @@ export async function PATCH(request: Request) {
   const { error } = await db.from('families').update(cambios).eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('families.update', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos guardar. Revisa los datos e inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ ok: true });
@@ -115,7 +123,11 @@ export async function DELETE(request: Request) {
   const { error } = await db.from('families').delete().eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('families.delete', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos quitar a esa familia. Inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ ok: true });

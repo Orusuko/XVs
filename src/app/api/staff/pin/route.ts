@@ -43,7 +43,11 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('staff_users.insert', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos crear el PIN. Inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

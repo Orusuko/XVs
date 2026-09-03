@@ -49,7 +49,11 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('events.insert', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos guardar los datos. Revisa los campos e inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ id: data.id }, { status: 201 });
@@ -76,7 +80,11 @@ export async function PATCH(request: Request) {
   const { error } = await db.from('events').update(soloCamposEditables(body)).eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    console.error('events.update', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos guardar los datos. Revisa los campos e inténtalo de nuevo.' },
+      { status: 400 },
+    );
   }
 
   return NextResponse.json({ ok: true });

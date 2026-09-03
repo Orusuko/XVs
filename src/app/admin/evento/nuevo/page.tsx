@@ -15,7 +15,7 @@ export default async function NuevoEventoPage() {
   return (
     <main className="textura-papel min-h-screen px-5 py-14">
       <div className="mx-auto w-full max-w-2xl">
-        <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">Paso 1 de 2</p>
+        <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">Evento nuevo</p>
         <h1 className="mt-3 font-display text-3xl text-tinta">Datos del evento</h1>
         <p className="mt-2 text-tinta-suave">
           Esto es lo que verán las familias en su invitación.

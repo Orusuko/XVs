@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { TablaFamilias } from '@/components/admin/TablaFamilias';
@@ -44,29 +43,10 @@ export default async function InvitadosPage({
   return (
     <main className="textura-papel min-h-screen px-5 py-14">
       <div className="mx-auto w-full max-w-4xl">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">
-              Lista de invitados
-            </p>
-            <h1 className="mt-3 font-display text-3xl text-tinta">{evento.quinceanera_nombre}</h1>
-          </div>
-
-          <div className="flex flex-wrap gap-x-6 gap-y-2 self-center">
-            <Link
-              href={`/admin/evento/${eventId}/plantilla`}
-              className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
-            >
-              Elegir plantilla
-            </Link>
-            <Link
-              href={`/admin/evento/${eventId}/datos`}
-              className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
-            >
-              Editar datos del evento
-            </Link>
-          </div>
-        </div>
+        <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">
+          Lista de invitados
+        </p>
+        <h1 className="mt-3 font-display text-3xl text-tinta">{evento.quinceanera_nombre}</h1>
 
         <div className="mt-10">
           <TablaFamilias

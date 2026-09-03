@@ -3,14 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boton } from '@/components/ui/Boton';
+import { SelectorMensaje } from '@/components/admin/SelectorMensaje';
+import { MENSAJES_INVITACION, esMensajeCatalogo } from '@/lib/mensajes-invitacion';
 import type { EventRow, Lugar, Padrino } from '@/lib/types';
-
-const MENSAJES = [
-  'Hay momentos que se guardan para siempre, y quiero que tú seas parte de este.',
-  'Con la ilusión de cumplir quince años, me encantaría celebrarlo contigo.',
-  'Hoy dejo atrás la niñez y me acompañas a empezar una etapa nueva.',
-  'Gracias por caminar conmigo hasta aquí. Acompáñame también esa noche.',
-];
 
 const LUGAR_VACIO: Lugar = { nombre: '', direccion: '', maps_url: '', fecha_hora: '' };
 
@@ -44,9 +39,9 @@ export function FormularioEvento({ evento }: Props) {
   const [padre, setPadre] = useState(evento?.padre ?? '');
   const [madre, setMadre] = useState(evento?.madre ?? '');
   const [padrinos, setPadrinos] = useState<Padrino[]>(evento?.padrinos ?? []);
-  const [mensaje, setMensaje] = useState(evento?.mensaje ?? MENSAJES[0]!);
+  const [mensaje, setMensaje] = useState(evento?.mensaje ?? MENSAJES_INVITACION[0]!);
   const [mensajePropio, setMensajePropio] = useState(
-    Boolean(evento?.mensaje && !MENSAJES.includes(evento.mensaje)),
+    Boolean(evento?.mensaje && !esMensajeCatalogo(evento.mensaje)),
   );
   const [misa, setMisa] = useState<Lugar>(evento?.misa ?? LUGAR_VACIO);
   const [recepcion, setRecepcion] = useState<Lugar>(evento?.recepcion ?? LUGAR_VACIO);
@@ -138,46 +133,19 @@ export function FormularioEvento({ evento }: Props) {
       </Seccion>
 
       <Seccion titulo="Mensaje">
-        <div className="space-y-2">
-          {MENSAJES.map((texto) => (
-            <label key={texto} className="flex cursor-pointer items-start gap-3 text-sm">
-              <input
-                type="radio"
-                name="mensaje"
-                checked={!mensajePropio && mensaje === texto}
-                onChange={() => {
-                  setMensajePropio(false);
-                  setMensaje(texto);
-                }}
-                className="mt-1 cursor-pointer accent-[#7b2d5e]"
-              />
-              <span className="text-tinta-suave">{texto}</span>
-            </label>
-          ))}
-
-          <label className="flex cursor-pointer items-center gap-3 text-sm">
-            <input
-              type="radio"
-              name="mensaje"
-              checked={mensajePropio}
-              onChange={() => {
-                setMensajePropio(true);
-                setMensaje('');
-              }}
-              className="cursor-pointer accent-[#7b2d5e]"
-            />
-            <span className="text-tinta">Escribir el mío</span>
-          </label>
-        </div>
-
-        {mensajePropio && (
-          <textarea
-            value={mensaje}
-            onChange={(campo) => setMensaje(campo.target.value)}
-            rows={3}
-            className="w-full rounded-[2px] border border-borde bg-papel-alto p-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
-          />
-        )}
+        <SelectorMensaje
+          valor={mensaje}
+          propio={mensajePropio}
+          onElegirCatalogo={(texto) => {
+            setMensajePropio(false);
+            setMensaje(texto);
+          }}
+          onEscribirPropio={() => {
+            setMensajePropio(true);
+            setMensaje('');
+          }}
+          onCambiarPropio={setMensaje}
+        />
       </Seccion>
 
       <Seccion titulo="Misa">

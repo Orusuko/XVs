@@ -3,17 +3,27 @@
 import { useState } from 'react';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
+import { EstadoHoja } from '@/components/ui/EstadoHoja';
 
 export function VistaConteo({ eventId }: { eventId: string }) {
   const { estado, error } = useEstadoStaff(eventId);
   const [pestana, setPestana] = useState<'ingresados' | 'pendientes'>('ingresados');
 
   if (error) {
-    return <p className="p-6 text-center text-oro-claro">{error}</p>;
+    return (
+      <EstadoHoja tono="tinta" etiqueta="Conteo" titulo="Se cortó la sesión" detalle={error} />
+    );
   }
 
   if (!estado) {
-    return <p className="p-6 text-center text-papel/60">Cargando el conteo…</p>;
+    return (
+      <EstadoHoja
+        tono="tinta"
+        etiqueta="Conteo"
+        titulo="Preparando el conteo"
+        detalle="Un momento, estamos pidiendo los boletos de esta noche."
+      />
+    );
   }
 
   const { resumen, evento } = estado;
@@ -79,11 +89,16 @@ export function VistaConteo({ eventId }: { eventId: string }) {
       </div>
 
       {lista.length === 0 ? (
-        <p className="mt-8 text-center text-papel/60">
-          {pestana === 'ingresados'
-            ? 'Todavía no entra nadie.'
-            : 'No queda ninguna familia confirmada por entrar.'}
-        </p>
+        <EstadoHoja
+          tono="tinta"
+          compacto
+          titulo={pestana === 'ingresados' ? 'Todavía no entra nadie' : 'No queda nadie por entrar'}
+          detalle={
+            pestana === 'ingresados'
+              ? 'En cuanto escaneen el primer boleto, aparece aquí.'
+              : 'Todas las familias confirmadas ya están dentro.'
+          }
+        />
       ) : (
         <ul className="mt-4 divide-y divide-papel/10">
           {lista.map((familia) => (

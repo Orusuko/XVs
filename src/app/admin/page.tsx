@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { supabaseServer } from '@/lib/supabase/server';
 import { FormularioAcceso } from '@/components/admin/FormularioAcceso';
 import { AvisoErrorAuth } from '@/components/auth/AvisoErrorAuth';
+import { EstadoHoja } from '@/components/ui/EstadoHoja';
 import type { EventRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -46,17 +47,20 @@ export default async function AdminPage() {
         <h1 className="mt-3 font-display text-3xl text-tinta">Tus eventos</h1>
 
         {!eventos || eventos.length === 0 ? (
-          <div className="talon mt-10 px-6 pb-8 pt-9 text-center">
-            <p className="font-display text-xl text-tinta">Todavía no hay ningún evento</p>
-            <p className="mt-2 text-sm text-tinta-suave">
-              Crea el evento para elegir la plantilla, capturar los datos y armar la lista de familias.
-            </p>
-            <Link
-              href="/admin/evento/nuevo"
-              className="mt-6 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[2px] border border-vino-hondo bg-vino px-5 text-sm font-medium text-papel-alto transition-colors duration-200 hover:bg-vino-hondo"
-            >
-              Crear el evento
-            </Link>
+          <div className="talon mt-10 px-6 py-2">
+            <EstadoHoja
+              compacto
+              titulo="Todavía no hay ningún evento"
+              detalle="Crea el evento para elegir la plantilla, capturar los datos y armar la lista de familias."
+              accion={
+                <Link
+                  href="/admin/evento/nuevo"
+                  className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[2px] border border-vino-hondo bg-vino px-5 text-sm font-medium text-papel-alto transition-colors duration-200 hover:bg-vino-hondo"
+                >
+                  Crear el evento
+                </Link>
+              }
+            />
           </div>
         ) : (
           <ul className="mt-8 space-y-3">

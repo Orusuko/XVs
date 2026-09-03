@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { SelectorPlantilla } from '@/components/admin/SelectorPlantilla';
@@ -48,21 +47,6 @@ export default async function PlantillaPage({
             templateConfig={templateConfig}
             actual={actual}
           />
-        </div>
-
-        <div className="mt-10 flex flex-wrap gap-6 border-t border-borde pt-6">
-          <Link
-            href={`/admin/evento/${eventId}/datos`}
-            className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
-          >
-            Continuar a datos del evento
-          </Link>
-          <Link
-            href={`/admin/evento/${eventId}/invitados`}
-            className="min-h-11 cursor-pointer text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
-          >
-            Ir a la lista de invitados
-          </Link>
         </div>
       </div>
     </main>
