@@ -37,16 +37,16 @@ export async function verificarQr(qr: string, eventId: string): Promise<Verifica
     return { resultado: 'invalido', mensaje: 'Esta familia ya no está en la lista.' };
   }
 
+  if (familia.checked_in) {
+    return { resultado: 'ya_ingresado', familia, mensaje: 'Este boleto ya fue registrado.' };
+  }
+
   if (!familia.qr_jti || familia.qr_jti !== verificado.jti) {
     return {
       resultado: 'jti_expirado',
       familia,
       mensaje: 'Este código ya fue reemplazado. Pide a la familia que abra su invitación de nuevo.',
     };
-  }
-
-  if (familia.checked_in) {
-    return { resultado: 'ya_ingresado', familia, mensaje: 'Este boleto ya fue registrado.' };
   }
 
   return { resultado: 'listo', familia };

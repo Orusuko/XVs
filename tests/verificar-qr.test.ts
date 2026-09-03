@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/admin', () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
-          maybeSingle: async () => ({ data: familiaMock.qr_jti ? familiaMock : null }),
+          maybeSingle: async () => ({ data: familiaMock }),
         }),
       }),
     }),
@@ -75,5 +75,26 @@ describe('verificarQr', () => {
       expect(resultado.familia.nombre_familia).toBe('García');
       expect(resultado.familia.boletos_total).toBe(4);
     }
+  });
+
+  test('si ya entró, checked_in gana aunque el jti esté consumido (null)', async () => {
+    const jti = newJti();
+    familiaMock.qr_jti = null;
+    familiaMock.checked_in = true;
+    const token = await signQrToken({ familyId: 'fam-1', eventId: 'ev-1', jti });
+
+    const resultado = await verificarQr(token, 'ev-1');
+    expect(resultado.resultado).toBe('ya_ingresado');
+    familiaMock.checked_in = false;
+  });
+
+  test('tras deshacer (checked_in false y jti null) el QR viejo es jti_expirado', async () => {
+    const jti = newJti();
+    familiaMock.qr_jti = null;
+    familiaMock.checked_in = false;
+    const token = await signQrToken({ familyId: 'fam-1', eventId: 'ev-1', jti });
+
+    const resultado = await verificarQr(token, 'ev-1');
+    expect(resultado.resultado).toBe('jti_expirado');
   });
 });
