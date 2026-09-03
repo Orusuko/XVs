@@ -82,6 +82,87 @@ body {
   border-top: 1px dashed var(--color-borde);
 }
 
+/* The downloadable pass: a cinema admission ticket, notched top and bottom. */
+.boleto-cine {
+  position: relative;
+  background: var(--color-papel-alto);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-hoja);
+}
+
+.boleto-cine::before,
+.boleto-cine::after {
+  content: "";
+  position: absolute;
+  left: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--color-papel);
+  border: 1px solid var(--color-borde);
+  clip-path: inset(0 0 0 50%);
+}
+
+.boleto-cine::before {
+  top: -9px;
+}
+
+.boleto-cine::after {
+  bottom: -9px;
+}
+
+.perforado-boleto {
+  border-top: 1px dashed var(--color-borde);
+}
+
+/*
+  Template skins. Each scopes the shared color tokens, so every component
+  underneath (buttons, the ticket stub, the pass) re-themes for free — only
+  the palette changes, the interaction language stays one and the same.
+*/
+.tema-jardin {
+  --color-papel: #eef3f8;
+  --color-papel-alto: #ffffff;
+  --color-tinta: #223a52;
+  --color-tinta-suave: #5b7ca8;
+  --color-vino: #4f7096;
+  --color-vino-hondo: #37536f;
+  --color-oro: #c98fab;
+  --color-oro-claro: #dba9c1;
+  --color-borde: #cfe0ee;
+}
+
+.tema-mariposas {
+  --color-papel: #f4eefa;
+  --color-papel-alto: #ffffff;
+  --color-tinta: #4a2f61;
+  --color-tinta-suave: #8a6bb0;
+  --color-vino: #9a5fae;
+  --color-vino-hondo: #7a3f8e;
+  --color-oro: #c9932e;
+  --color-oro-claro: #dbac4f;
+  --color-borde: #e4cdee;
+}
+
+/* Mariposas' signature: the whole hero sits inside a nested gold hairline frame. */
+.marco-mariposas {
+  border: 1px solid var(--color-oro);
+  box-shadow: 0 0 0 8px var(--color-papel), 0 0 0 9px var(--color-oro);
+}
+
+/* Decorative barcode stripes. Never encodes real data — purely a printed-ticket cue. */
+.codigo-decorativo {
+  display: inline-block;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-tinta-suave) 0,
+    var(--color-tinta-suave) 2px,
+    transparent 2px,
+    transparent 5px
+  );
+  opacity: 0.45;
+}
+
 /* Entrance choreography, one orchestrated pass on load. */
 @keyframes surgir {
   from {

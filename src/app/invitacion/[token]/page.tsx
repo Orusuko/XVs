@@ -2,6 +2,10 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadInvitation } from '@/lib/invitation';
 import { ClasicaTemplate } from '@/components/templates/ClasicaTemplate';
+import { JardinTemplate } from '@/components/templates/JardinTemplate';
+import { MariposasTemplate } from '@/components/templates/MariposasTemplate';
+import type { TemplateId } from '@/lib/templates/catalogo';
+import type { InvitationView } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +24,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
+const PLANTILLAS: Record<TemplateId, (props: { token: string; invitacion: InvitationView }) => React.JSX.Element> = {
+  clasica: ClasicaTemplate,
+  jardin: JardinTemplate,
+  mariposas: MariposasTemplate,
+};
+
 export default async function InvitacionPage({ params }: Props) {
   const { token } = await params;
   const invitacion = await loadInvitation(token);
 
   if (!invitacion) notFound();
 
-  return <ClasicaTemplate token={token} invitacion={invitacion} />;
+  const Plantilla = PLANTILLAS[invitacion.evento.templateId];
+  return <Plantilla token={token} invitacion={invitacion} />;
 }

@@ -1,79 +1,146 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatearHora } from '@/lib/format';
+import { FichaEscaner, type Ficha } from '@/components/staff/FichaEscaner';
 import { peekQrClaims } from '@/lib/qr/peek';
 import { buscarFamiliaLocal, encolarEscaneo } from '@/lib/offline/queue';
 
-type Veredicto = {
-  tono: 'exitoso' | 'duplicado' | 'invalido' | 'pendiente';
-  titulo: string;
-  detalle: string;
-  boletos?: number;
-};
-
 const LECTOR_ID = 'lector-qr';
 
+type RespuestaCheckin = {
+  resultado: string;
+  familia?: string;
+  boletos?: number;
+  checkedInAt?: string | null;
+  mensaje: string;
+};
+
 export function VistaEscaner({ eventId }: { eventId: string }) {
-  const [veredicto, setVeredicto] = useState<Veredicto | null>(null);
+  const [ficha, setFicha] = useState<Ficha | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
   const [falloCamara, setFalloCamara] = useState<string | null>(null);
   const procesando = useRef(false);
-  const ultimoCodigo = useRef<string | null>(null);
+  const qrActual = useRef<string | null>(null);
 
-  const registrar = useCallback(
+  const cerrar = useCallback(() => {
+    setFicha(null);
+    setConfirmando(false);
+    procesando.current = false;
+    qrActual.current = null;
+  }, []);
+
+  const previsualizar = useCallback(
     async (qr: string) => {
-      if (procesando.current || qr === ultimoCodigo.current) return;
+      if (procesando.current) return;
 
       procesando.current = true;
-      ultimoCodigo.current = qr;
+      qrActual.current = qr;
 
       try {
-        const respuesta = await fetch('/api/checkin', {
+        const respuesta = await fetch('/api/checkin/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ qr, eventId }),
         });
 
-        const datos = await respuesta.json();
+        const datos: RespuestaCheckin = await respuesta.json();
 
         if (!respuesta.ok) {
-          setVeredicto({
-            tono: 'invalido',
-            titulo: 'No se pudo registrar',
-            detalle: datos.error ?? 'Intenta de nuevo.',
-          });
+          setFicha({ tono: 'invalido', mensaje: (datos as { error?: string }).error ?? 'Intenta de nuevo.' });
           return;
         }
 
-        setVeredicto(traducir(datos));
+        if (datos.resultado === 'listo') {
+          setFicha({ tono: 'listo', familia: datos.familia, boletos: datos.boletos, mensaje: 'Confirma para dejarla pasar.' });
+        } else if (datos.resultado === 'duplicado') {
+          setFicha({
+            tono: 'duplicado',
+            familia: datos.familia,
+            boletos: datos.boletos,
+            checkedInAt: datos.checkedInAt,
+            mensaje: datos.mensaje,
+          });
+        } else {
+          setFicha({
+            tono: 'invalido',
+            familia: datos.familia,
+            mensaje: datos.resultado === 'jti_expirado' ? datos.mensaje : datos.mensaje,
+          });
+        }
       } catch {
-        // No signal. Queue it and tell staff exactly what that means.
+        // No signal. Show the cached family so staff can still decide, and
+        // queue the actual check-in for when the connection returns.
         const claims = peekQrClaims(qr);
         const familia = claims ? await buscarFamiliaLocal(claims.familyId) : undefined;
 
-        await encolarEscaneo({
-          eventId,
-          qr,
-          familia: familia?.nombre_familia ?? 'Familia',
-          boletos: familia?.boletos_total ?? 0,
-          registradoEn: new Date().toISOString(),
-        });
-
-        setVeredicto({
+        setFicha({
           tono: 'pendiente',
-          titulo: familia?.nombre_familia ?? 'Escaneo guardado',
-          detalle: 'Sin conexión. Se registrará solo cuando vuelva la señal.',
+          familia: familia?.nombre_familia ?? 'Familia',
           boletos: familia?.boletos_total,
+          mensaje: 'Sin conexión. Se registrará cuando vuelva la señal.',
         });
-      } finally {
-        setTimeout(() => {
-          procesando.current = false;
-          ultimoCodigo.current = null;
-        }, 2500);
       }
     },
     [eventId],
   );
+
+  async function adelante() {
+    const qr = qrActual.current;
+    if (!qr || !ficha) return;
+
+    if (ficha.tono === 'pendiente') {
+      const claims = peekQrClaims(qr);
+      const familia = claims ? await buscarFamiliaLocal(claims.familyId) : undefined;
+
+      await encolarEscaneo({
+        eventId,
+        qr,
+        familia: familia?.nombre_familia ?? ficha.familia ?? 'Familia',
+        boletos: familia?.boletos_total ?? ficha.boletos ?? 0,
+        registradoEn: new Date().toISOString(),
+      });
+
+      setFicha({ ...ficha, tono: 'exitoso', mensaje: 'Guardado. Se registrará al volver la señal.' });
+      setTimeout(cerrar, 1800);
+      return;
+    }
+
+    setConfirmando(true);
+
+    try {
+      const respuesta = await fetch('/api/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr, eventId }),
+      });
+
+      const datos: RespuestaCheckin = await respuesta.json();
+
+      if (!respuesta.ok || datos.resultado !== 'exitoso') {
+        setFicha({
+          tono: datos.resultado === 'duplicado' ? 'duplicado' : 'invalido',
+          familia: datos.familia ?? ficha.familia,
+          boletos: datos.boletos ?? ficha.boletos,
+          checkedInAt: datos.checkedInAt,
+          mensaje: datos.mensaje ?? 'No se pudo registrar.',
+        });
+        setConfirmando(false);
+        return;
+      }
+
+      setFicha({
+        tono: 'exitoso',
+        familia: datos.familia,
+        boletos: datos.boletos,
+        mensaje: 'Pueden pasar.',
+      });
+      setConfirmando(false);
+      setTimeout(cerrar, 1800);
+    } catch {
+      setFicha({ ...ficha, tono: 'invalido', mensaje: 'Se perdió la conexión al confirmar. Intenta de nuevo.' });
+      setConfirmando(false);
+    }
+  }
 
   useEffect(() => {
     let lector: { stop: () => Promise<void>; clear: () => void } | null = null;
@@ -90,7 +157,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         await instancia.start(
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 260, height: 260 } },
-          (texto) => void registrar(texto),
+          (texto) => void previsualizar(texto),
           () => {},
         );
       } catch {
@@ -106,7 +173,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       cancelado = true;
       lector?.stop().then(() => lector?.clear()).catch(() => {});
     };
-  }, [registrar]);
+  }, [previsualizar]);
 
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">
@@ -120,62 +187,14 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
 
       {falloCamara && <p className="mt-4 text-sm text-oro-claro">{falloCamara}</p>}
 
-      {veredicto && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`mt-6 border-l-4 px-5 py-5 ${ESTILO_TONO[veredicto.tono]}`}
-        >
-          <p className="font-display text-2xl">{veredicto.titulo}</p>
-          {veredicto.boletos !== undefined && veredicto.boletos > 0 && (
-            <p className="mt-1 font-ticket text-3xl">
-              {veredicto.boletos} {veredicto.boletos === 1 ? 'boleto' : 'boletos'}
-            </p>
-          )}
-          <p className="mt-2 text-sm opacity-85">{veredicto.detalle}</p>
-        </div>
+      {ficha && (
+        <FichaEscaner
+          ficha={ficha}
+          confirmando={confirmando}
+          onAdelante={ficha.tono === 'listo' || ficha.tono === 'pendiente' ? adelante : null}
+          onCerrar={cerrar}
+        />
       )}
     </main>
   );
-}
-
-const ESTILO_TONO: Record<Veredicto['tono'], string> = {
-  exitoso: 'border-l-[#8fd6a8] bg-[#8fd6a8]/12 text-papel',
-  duplicado: 'border-l-oro-claro bg-oro-claro/12 text-papel',
-  invalido: 'border-l-[#e88b84] bg-[#e88b84]/12 text-papel',
-  pendiente: 'border-l-papel/50 bg-papel/8 text-papel',
-};
-
-function traducir(datos: {
-  resultado: string;
-  familia?: string;
-  boletos?: number;
-  checkedInAt?: string | null;
-  mensaje: string;
-}): Veredicto {
-  if (datos.resultado === 'exitoso') {
-    return {
-      tono: 'exitoso',
-      titulo: datos.familia ?? 'Acceso registrado',
-      detalle: 'Pueden pasar.',
-      boletos: datos.boletos,
-    };
-  }
-
-  if (datos.resultado === 'duplicado') {
-    return {
-      tono: 'duplicado',
-      titulo: datos.familia ?? 'Boleto repetido',
-      detalle: datos.checkedInAt
-        ? `Este boleto ya fue registrado a las ${formatearHora(datos.checkedInAt)}.`
-        : datos.mensaje,
-      boletos: datos.boletos,
-    };
-  }
-
-  return {
-    tono: 'invalido',
-    titulo: datos.resultado === 'jti_expirado' ? 'Código vencido' : 'Código no válido',
-    detalle: datos.mensaje,
-  };
 }

@@ -11,6 +11,9 @@ type Props = {
   quinceanera: string;
 };
 
+const ACCION =
+  'inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-sm leading-none transition-colors duration-200';
+
 export function BloqueLugar({ etiqueta, lugar, quinceanera }: Props) {
   const inicio = new Date(lugar.fecha_hora);
   const valida = !Number.isNaN(inicio.getTime());
@@ -47,38 +50,40 @@ export function BloqueLugar({ etiqueta, lugar, quinceanera }: Props) {
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-4">
+      {/* One row, one baseline: pin + Agendar + Google Calendar all share the same 44px chip. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
         {lugar.maps_url && (
           <a
             href={lugar.maps_url}
             target="_blank"
             rel="noreferrer"
             aria-label={`Ver ${lugar.nombre} en el mapa`}
-            className="inline-flex min-h-11 min-w-11 cursor-pointer items-center gap-2 text-vino transition-colors duration-200 hover:text-vino-hondo"
+            className={`${ACCION} text-vino hover:text-vino-hondo`}
           >
-            <IconoPin className="h-6 w-6" />
-            <span className="text-sm">Cómo llegar</span>
+            <IconoPin className="h-5 w-5" />
+            Cómo llegar
           </a>
         )}
 
         {valida && (
-          <div className="flex items-center gap-3 text-sm">
+          <>
             <button
               type="button"
               onClick={descargarIcs}
-              className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+              className={`${ACCION} text-vino underline underline-offset-4 hover:text-vino-hondo`}
             >
               Agendar
             </button>
+
             <a
               href={buildGoogleCalendarUrl(evento)}
               target="_blank"
               rel="noreferrer"
-              className="min-h-11 cursor-pointer text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
+              className={`${ACCION} text-tinta-suave underline underline-offset-4 hover:text-vino`}
             >
               Google Calendar
             </a>
-          </div>
+          </>
         )}
       </div>
     </section>

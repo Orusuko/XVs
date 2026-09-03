@@ -1,4 +1,4 @@
-import { Document, Link, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Image, Link, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import { formatearFecha, formatearHora } from '@/lib/format';
 import type { InvitationView, Lugar } from '@/lib/types';
 
@@ -36,6 +36,19 @@ const estilos = StyleSheet.create({
   bloque: { marginTop: 24, borderTopWidth: 1, borderColor: '#DCC5D5', paddingTop: 14 },
   lugarNombre: { fontSize: 14, marginTop: 4 },
   enlace: { color: '#7B2D5E', marginTop: 6 },
+  boleto: {
+    marginTop: 28,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#DCC5D5',
+    borderRadius: 2,
+    padding: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  boletoNumero: { fontSize: 34, color: '#7B2D5E', marginTop: 2 },
+  qrImagen: { width: 96, height: 96 },
 });
 
 function BloqueLugarPdf({ etiqueta, lugar }: { etiqueta: string; lugar: Lugar }) {
@@ -56,7 +69,13 @@ function BloqueLugarPdf({ etiqueta, lugar }: { etiqueta: string; lugar: Lugar })
   );
 }
 
-export function InvitationPdf({ invitacion }: { invitacion: InvitationView }) {
+type Props = {
+  invitacion: InvitationView;
+  /** Only present once the family has confirmed — that is what puts the pass on the page. */
+  qrDataUrl?: string;
+};
+
+export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean).join(' y ');
 
@@ -98,6 +117,21 @@ export function InvitationPdf({ invitacion }: { invitacion: InvitationView }) {
 
         {evento.misa ? <BloqueLugarPdf etiqueta="Misa" lugar={evento.misa} /> : null}
         {evento.recepcion ? <BloqueLugarPdf etiqueta="Recepción" lugar={evento.recepcion} /> : null}
+
+        {qrDataUrl ? (
+          <View style={estilos.boleto}>
+            <View>
+              <Text style={estilos.eyebrow}>ADMITE</Text>
+              <Text style={estilos.boletoNumero}>{String(familia.boletos).padStart(2, '0')}</Text>
+              <Text style={[estilos.sutil, { fontSize: 9 }]}>
+                {familia.boletos === 1 ? 'boleto' : 'boletos'} · muestra este código en la entrada
+              </Text>
+            </View>
+            {/* react-pdf's Image is a PDF primitive, not an HTML img — it has no alt prop. */}
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
+            <Image style={estilos.qrImagen} src={qrDataUrl} />
+          </View>
+        ) : null}
       </Page>
     </Document>
   );

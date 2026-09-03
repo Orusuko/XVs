@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import { FormularioEvento } from '@/components/admin/FormularioEvento';
@@ -44,10 +45,21 @@ export default async function DatosEventoPage({
   return (
     <main className="textura-papel min-h-screen px-5 py-14">
       <div className="mx-auto w-full max-w-2xl">
-        <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">
-          Editar evento
-        </p>
-        <h1 className="mt-3 font-display text-3xl text-tinta">{evento.quinceanera_nombre}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">
+              Editar evento
+            </p>
+            <h1 className="mt-3 font-display text-3xl text-tinta">{evento.quinceanera_nombre}</h1>
+          </div>
+
+          <Link
+            href={`/admin/evento/${eventId}/plantilla`}
+            className="min-h-11 cursor-pointer self-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+          >
+            Elegir plantilla
+          </Link>
+        </div>
 
         <div className="mt-10">
           <FormularioEvento evento={evento} />

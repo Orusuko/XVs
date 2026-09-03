@@ -1,5 +1,6 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { CLAVE_TEMPLATE_CONFIG, TEMPLATE_POR_DEFECTO, esTemplateId } from '@/lib/templates/catalogo';
 import type { EventRow, FamilyRow, InvitationView } from '@/lib/types';
 
 /**
@@ -45,6 +46,9 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
 
   if (!evento || evento.estado === 'cancelado') return null;
 
+  const templateConfig = evento.template_config ?? {};
+  const plantillaElegida = templateConfig[CLAVE_TEMPLATE_CONFIG];
+
   return {
     familia: {
       nombre: familia.nombre_familia,
@@ -59,7 +63,8 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
       mensaje: evento.mensaje,
       misa: evento.misa,
       recepcion: evento.recepcion,
-      templateConfig: evento.template_config ?? {},
+      templateId: esTemplateId(plantillaElegida) ? plantillaElegida : TEMPLATE_POR_DEFECTO,
+      templateConfig,
     },
   };
 }

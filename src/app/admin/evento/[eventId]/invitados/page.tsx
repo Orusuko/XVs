@@ -52,12 +52,20 @@ export default async function InvitadosPage({
             <h1 className="mt-3 font-display text-3xl text-tinta">{evento.quinceanera_nombre}</h1>
           </div>
 
-          <Link
-            href={`/admin/evento/${eventId}/datos`}
-            className="min-h-11 cursor-pointer self-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
-          >
-            Editar datos del evento
-          </Link>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 self-center">
+            <Link
+              href={`/admin/evento/${eventId}/plantilla`}
+              className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+            >
+              Elegir plantilla
+            </Link>
+            <Link
+              href={`/admin/evento/${eventId}/datos`}
+              className="min-h-11 cursor-pointer text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+            >
+              Editar datos del evento
+            </Link>
+          </div>
         </div>
 
         <div className="mt-10">

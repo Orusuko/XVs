@@ -1,3 +1,5 @@
+import type { TemplateId } from '@/lib/templates/catalogo';
+
 export type Padrino = {
   nombre: string;
   rol: string;
@@ -78,6 +80,7 @@ export type InvitationView = {
     mensaje: string | null;
     misa: Lugar | null;
     recepcion: Lugar | null;
+    templateId: TemplateId;
     templateConfig: Record<string, string>;
   };
 };

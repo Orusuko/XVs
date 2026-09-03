@@ -2,18 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { Boton } from '@/components/ui/Boton';
-import { TalonQr } from '@/components/invitation/TalonQr';
-import type { EstadoConfirmacion } from '@/lib/types';
+import { PaseCine } from '@/components/invitation/PaseCine';
+import { DescargarPdf } from '@/components/invitation/DescargarPdf';
+import type { EstadoConfirmacion, InvitationView } from '@/lib/types';
 
 type Props = {
   token: string;
-  familia: string;
-  boletos: number;
-  estadoInicial: EstadoConfirmacion;
+  invitacion: InvitationView;
 };
 
-export function PanelConfirmacion({ token, familia, boletos, estadoInicial }: Props) {
-  const [estado, setEstado] = useState<EstadoConfirmacion>(estadoInicial);
+/**
+ * Owns the whole confirm-and-collect-your-pass flow, so the QR and the PDF
+ * button always agree on the same state: neither exists until the family says
+ * yes, and both stay in sync the moment they do.
+ */
+export function PanelConfirmacion({ token, invitacion }: Props) {
+  const { familia } = invitacion;
+  const [estado, setEstado] = useState<EstadoConfirmacion>(familia.estado);
   const [qr, setQr] = useState<string | null>(null);
   const [reciénConfirmado, setReciénConfirmado] = useState(false);
   const [preguntando, setPreguntando] = useState(false);
@@ -23,13 +28,13 @@ export function PanelConfirmacion({ token, familia, boletos, estadoInicial }: Pr
   // A family that already said yes gets their existing pass back, without
   // rotating the nonce, so an earlier download keeps working.
   useEffect(() => {
-    if (estadoInicial !== 'confirmado') return;
+    if (familia.estado !== 'confirmado') return;
 
     fetch(`/api/invitacion/${token}/qr`)
       .then((res) => (res.ok ? res.json() : null))
       .then((datos) => datos?.qr && setQr(datos.qr))
       .catch(() => setError('No pudimos cargar tu pase. Revisa tu conexión.'));
-  }, [estadoInicial, token]);
+  }, [familia.estado, token]);
 
   async function responder(asistira: boolean) {
     setEnviando(true);
@@ -65,68 +70,54 @@ export function PanelConfirmacion({ token, familia, boletos, estadoInicial }: Pr
     }
   }
 
-  if (estado === 'rechazado') {
-    return (
-      <div className="mt-10 border-t border-borde pt-8 text-center">
-        <p className="font-display text-xl text-tinta">Gracias por avisarnos</p>
-        <p className="mt-2 text-tinta-suave">Te vamos a extrañar esa noche.</p>
-        <Boton variante="texto" className="mt-4" onClick={() => setPreguntando(true)}>
-          Cambiar mi respuesta
-        </Boton>
-        {preguntando && (
-          <Dialogo
-            enviando={enviando}
-            onCerrar={() => setPreguntando(false)}
-            onResponder={responder}
-          />
-        )}
-      </div>
-    );
-  }
-
-  if (estado === 'confirmado') {
-    return (
-      <div className="mt-2">
-        {qr ? (
-          <TalonQr
+  return (
+    <div className="mt-2">
+      {estado === 'confirmado' &&
+        (qr ? (
+          <PaseCine
             qr={qr}
-            familia={familia}
-            boletos={boletos}
+            familia={familia.nombre}
+            boletos={familia.boletos}
             descargarAlAparecer={reciénConfirmado}
           />
         ) : (
           <p className="mt-10 text-center text-tinta-suave">Preparando tu pase…</p>
+        ))}
+
+      {/* The PDF always reflects the same pass: no QR until estado is confirmado. */}
+      <div className="mt-6 border-t border-borde pt-6">
+        <DescargarPdf invitacion={invitacion} qr={estado === 'confirmado' ? qr ?? undefined : undefined} />
+      </div>
+
+      {error && <p className="mt-4 text-center text-sm text-alerta">{error}</p>}
+
+      <div className="mt-6 border-t border-borde pt-6 text-center">
+        {estado === 'rechazado' && (
+          <>
+            <p className="font-display text-xl text-tinta">Gracias por avisarnos</p>
+            <p className="mt-2 text-tinta-suave">Te vamos a extrañar esa noche.</p>
+          </>
         )}
 
-        {error && <p className="mt-4 text-center text-sm text-alerta">{error}</p>}
-
-        <div className="mt-6 text-center">
-          <Boton variante="texto" onClick={() => setPreguntando(true)}>
-            Cambiar mi respuesta
+        {estado === 'pendiente' && (
+          <Boton className="w-full" onClick={() => setPreguntando(true)}>
+            Confirmar asistencia
           </Boton>
-          <p className="mt-2 text-xs text-tinta-suave">
-            Si confirmas otra vez se genera un pase nuevo y el anterior deja de servir.
-          </p>
-        </div>
+        )}
 
-        {preguntando && (
-          <Dialogo
-            enviando={enviando}
-            onCerrar={() => setPreguntando(false)}
-            onResponder={responder}
-          />
+        {estado !== 'pendiente' && (
+          <>
+            <Boton variante="texto" className="mt-2" onClick={() => setPreguntando(true)}>
+              Cambiar mi respuesta
+            </Boton>
+            {estado === 'confirmado' && (
+              <p className="mt-2 text-xs text-tinta-suave">
+                Si confirmas otra vez se genera un pase nuevo y el anterior deja de servir.
+              </p>
+            )}
+          </>
         )}
       </div>
-    );
-  }
-
-  return (
-    <div className="mt-10 border-t border-borde pt-8">
-      <Boton className="w-full" onClick={() => setPreguntando(true)}>
-        Confirmar asistencia
-      </Boton>
-
-      {error && <p className="mt-3 text-center text-sm text-alerta">{error}</p>}
 
       {preguntando && (
         <Dialogo
