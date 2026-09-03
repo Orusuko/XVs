@@ -1,3 +1,5 @@
+import { MENSAJE_SCRIPT } from '@/lib/auth/crear-organizador-cli';
+
 export type ErrorAcceso = {
   message?: string;
   code?: string;
@@ -5,22 +7,32 @@ export type ErrorAcceso = {
 } | null | undefined;
 
 export const MENSAJES_ACCESO = {
-  credenciales: 'Correo o contraseña incorrectos.',
+  credenciales:
+    'Correo o contraseña incorrectos. Si no tienes usuario confirmado, corre el script: ' +
+    MENSAJE_SCRIPT,
   confirmarCorreo:
-    'Ese correo aún no está confirmado. En Authentication → Providers → Email desactiva «Confirm email» (esta app es de un solo evento) y vuelve a entrar.',
+    'Ese correo aún no está confirmado. No esperes el email: corre el script ' +
+    '(email_confirm queda en true aunque Confirm email siga activo): ' +
+    MENSAJE_SCRIPT,
   signupSinSesion:
-    'La cuenta se creó, pero Supabase pide confirmar el correo. En Authentication → Providers → Email desactiva «Confirm email» y entra de nuevo con la misma contraseña.',
+    'La cuenta se creó, pero Supabase pide confirmar el correo. Corre el script y entra con esa contraseña: ' +
+    MENSAJE_SCRIPT,
   limite:
-    'Supabase está limitando los envíos de correo. Si ya tienes cuenta (incluso de intentos con código), entra con contraseña. Si no, en Authentication → Users crea el usuario con Add user (auto-confirmado) o restablece la contraseña de ese correo.',
+    'Supabase está limitando los envíos de correo. No uses «Crear cuenta» ni el código. Corre el script y entra aquí: ' +
+    MENSAJE_SCRIPT,
   yaExiste:
-    'Ese correo ya tiene cuenta. Entra con la contraseña, o restablécela en Authentication → Users.',
+    'Ese correo ya tiene cuenta. Entra con la contraseña, o restablécela corriendo el script: ' +
+    MENSAJE_SCRIPT,
   debil: 'La contraseña debe tener al menos 8 caracteres.',
   registroDesactivado:
-    'El registro está desactivado. Crea el usuario en Authentication → Users → Add user.',
+    'El registro está desactivado. Corre el script para crear el usuario: ' + MENSAJE_SCRIPT,
   correoInvalido: 'Ese correo no es válido. Usa una dirección real.',
   otpCaducado:
-    'Ese código no es válido o ya caducó. Pide otro y escríbelo aquí; no pulses Sign In.',
-  generico: 'No pudimos completar el acceso. Inténtalo de nuevo.',
+    'Ese código no es válido o ya caducó. Entra con correo y contraseña, o corre el script: ' +
+    MENSAJE_SCRIPT,
+  generico:
+    'No pudimos completar el acceso. Si no puedes entrar, corre el script y usa esa contraseña: ' +
+    MENSAJE_SCRIPT,
 } as const;
 
 function textoError(error: ErrorAcceso): { code: string; message: string; status: number } {

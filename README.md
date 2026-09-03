@@ -51,15 +51,29 @@ npm run dev
 
 ## Auth del organizador (Supabase)
 
-El panel (`/admin`) entra con **correo y contraseña**. El código por correo queda como alternativa.
+El panel (`/admin`) entra con **correo y contraseña**. No hace falta el correo mágico.
 
-Para probar ya (tres clics en el dashboard):
+### Crear el usuario (sin esperar email)
 
-1. **Authentication → Providers → Email** — desactiva **Confirm email**. En una app de un solo evento no hace falta confirmar el correo; si queda activo, `signUp` no deja sesión y el usuario queda bloqueado.
-2. **(Opcional, lo más rápido si el registro está limitado)** **Authentication → Users → Add user** — crea el correo con contraseña y deja el usuario auto-confirmado.
-3. Entra en `/admin` con ese correo y contraseña.
+En la raíz del repo, con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env` o `.env.local`:
 
-Si **Crear cuenta** responde con límite de envíos (rate limit), el login con contraseña de un usuario **ya existente** sigue funcionando. Es probable que ya tengas usuarios de intentos OTP anteriores: abre **Authentication → Users**, elige el correo y restablece la contraseña, o crea uno nuevo con **Add user**.
+```bash
+node --env-file=.env scripts/crear-organizador.mjs --email tu@correo.com --password "elige-una-clave-de-8+"
+```
+
+Si tus variables están en `.env.local`:
+
+```bash
+node --env-file=.env.local scripts/crear-organizador.mjs --email tu@correo.com --password "elige-una-clave-de-8+"
+```
+
+También vale exportar `ORGANIZER_EMAIL` y `ORGANIZER_PASSWORD` en la shell (no las subas al repo).
+
+El script llama `auth.admin.createUser` con `email_confirm: true`. No envía correo. Si el usuario ya existía (intentos de código u OTP), actualiza la contraseña y confirma el email. «Confirm email» puede seguir activo en el dashboard: igual podrás entrar.
+
+Luego abre `http://localhost:3000/admin` y entra con ese correo y contraseña.
+
+Si el script dice que falta `SUPABASE_SERVICE_ROLE_KEY`, cópiala de Project Settings → API a `.env` (nunca la commitees) y vuelve a correrlo. El formulario no puede crear el usuario cuando el correo está limitado.
 
 ### Código por correo (opcional)
 
