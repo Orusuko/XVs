@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { requestIp } from '@/lib/request-ip';
 import { readStaffSession } from '@/lib/staff-session';
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +12,11 @@ export const dynamic = 'force-dynamic';
  * count. The family reopens their invitation to get a fresh one.
  */
 export async function POST(request: Request) {
+  const limite = await checkRateLimit(`checkin-undo:${requestIp(request)}`, 30, 60_000);
+  if (!limite.allowed) {
+    return NextResponse.json({ error: 'Demasiados intentos seguidos.' }, { status: 429 });
+  }
+
   let eventId: unknown;
   let familyId: unknown;
   try {

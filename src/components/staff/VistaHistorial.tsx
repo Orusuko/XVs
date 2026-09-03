@@ -27,21 +27,28 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ eventId, familyId }),
     });
-    const datos = await respuesta.json();
-    setAviso(datos.mensaje ?? datos.error ?? null);
+    const datos = await respuesta.json().catch(() => null);
+    setAviso(
+      respuesta.ok
+        ? (datos?.mensaje ?? null)
+        : (datos?.error ?? 'No pudimos completar eso. Inténtalo de nuevo.'),
+    );
     setTrabajando(null);
     await refrescar();
   }
 
   async function revertir(familyId: string) {
     setTrabajando(familyId);
-    await fetch('/api/checkin/undo', {
+    const respuesta = await fetch('/api/checkin/undo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ eventId, familyId }),
     });
+    const datos = await respuesta.json().catch(() => null);
     setAviso(
-      'Entrada revertida. Ese código QR ya no sirve: la familia debe abrir su invitación otra vez.',
+      respuesta.ok
+        ? 'Entrada revertida. Ese código QR ya no sirve: la familia debe abrir su invitación otra vez.'
+        : (datos?.error ?? 'No pudimos completar eso. Inténtalo de nuevo.'),
     );
     setTrabajando(null);
     await refrescar();

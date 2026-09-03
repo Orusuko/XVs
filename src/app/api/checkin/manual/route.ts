@@ -1,13 +1,25 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rate-limit';
+import { requestIp } from '@/lib/request-ip';
 import { camposEntrada } from '@/lib/checkin/entrada';
 import { readStaffSession } from '@/lib/staff-session';
 import type { FamilyRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+type FamiliaManual = Pick<
+  FamilyRow,
+  'id' | 'nombre_familia' | 'boletos_total' | 'checked_in' | 'checked_in_at' | 'estado_confirmacion'
+>;
+
 /** Fallback for a dead camera or an unreadable screen. */
 export async function POST(request: Request) {
+  const limite = await checkRateLimit(`checkin-manual:${requestIp(request)}`, 60, 60_000);
+  if (!limite.allowed) {
+    return NextResponse.json({ error: 'Demasiados escaneos seguidos.' }, { status: 429 });
+  }
+
   let eventId: unknown;
   let familyId: unknown;
   try {
@@ -32,18 +44,44 @@ export async function POST(request: Request) {
     .eq('id', familyId)
     .eq('event_id', eventId)
     .eq('checked_in', false)
+    .eq('estado_confirmacion', 'confirmado')
     .select('id, nombre_familia, boletos_total, checked_in_at')
     .returns<Pick<FamilyRow, 'id' | 'nombre_familia' | 'boletos_total' | 'checked_in_at'>[]>();
 
   if (!actualizadas || actualizadas.length === 0) {
+    const { data: familia } = await db
+      .from('families')
+      .select('id, nombre_familia, boletos_total, checked_in, checked_in_at, estado_confirmacion')
+      .eq('id', familyId)
+      .eq('event_id', eventId)
+      .maybeSingle<FamiliaManual>();
+
+    if (!familia) {
+      return NextResponse.json({ error: 'Familia no encontrada.' }, { status: 404 });
+    }
+
+    if (familia.checked_in) {
+      await db.from('checkin_logs').insert({
+        event_id: eventId,
+        family_id: familyId,
+        scanned_by: sesion.nombre,
+        resultado: 'duplicado',
+      });
+
+      return NextResponse.json({
+        resultado: 'duplicado',
+        mensaje: 'Esta familia ya había entrado.',
+      });
+    }
+
     await db.from('checkin_logs').insert({
       event_id: eventId,
       family_id: familyId,
       scanned_by: sesion.nombre,
-      resultado: 'duplicado',
+      resultado: 'invalido',
     });
 
-    return NextResponse.json({ resultado: 'duplicado', mensaje: 'Esta familia ya había entrado.' });
+    return NextResponse.json({ error: 'Esa familia no ha confirmado.' }, { status: 409 });
   }
 
   await db.from('checkin_logs').insert({
