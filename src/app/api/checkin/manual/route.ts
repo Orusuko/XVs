@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { camposEntrada } from '@/lib/checkin/entrada';
 import { readStaffSession } from '@/lib/staff-session';
 import type { FamilyRow } from '@/lib/types';
 
@@ -27,11 +28,7 @@ export async function POST(request: Request) {
   const db = supabaseAdmin();
   const { data: actualizadas } = await db
     .from('families')
-    .update({
-      checked_in: true,
-      checked_in_at: new Date().toISOString(),
-      checked_in_by: `${sesion.nombre} (manual)`,
-    })
+    .update(camposEntrada(sesion.nombre, 'manual'))
     .eq('id', familyId)
     .eq('event_id', eventId)
     .eq('checked_in', false)

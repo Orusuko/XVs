@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
+import { camposEntrada } from '@/lib/checkin/entrada';
 import { verificarQr } from '@/lib/checkin/verificar-qr';
 import { readStaffSession } from '@/lib/staff-session';
 import type { CheckinResultado } from '@/lib/types';
@@ -71,11 +72,7 @@ export async function POST(request: Request) {
   const db = supabaseAdmin();
   const { data: actualizadas } = await db
     .from('families')
-    .update({
-      checked_in: true,
-      checked_in_at: new Date().toISOString(),
-      checked_in_by: sesion.nombre,
-    })
+    .update(camposEntrada(sesion.nombre, 'escaner'))
     .eq('id', verificado.familia.id)
     .eq('checked_in', false)
     .select('id, nombre_familia, boletos_total, checked_in_at');
