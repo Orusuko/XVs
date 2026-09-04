@@ -1,6 +1,7 @@
 'use client';
 
 import { openDB, type IDBPDatabase } from 'idb';
+import { decisionCola } from '@/lib/offline/decision-cola';
 
 const BASE = 'xv-escaner';
 const ALMACEN = 'pendientes';
@@ -70,10 +71,17 @@ export async function borrarEscaneo(id: number): Promise<void> {
  * Sends everything captured while the venue had no signal. The server is still
  * the authority: a scan that turns out to be a duplicate is reported as such.
  */
-export async function sincronizarPendientes(): Promise<{ enviados: number; duplicados: number }> {
+export async function sincronizarPendientes(): Promise<{
+  enviados: number;
+  duplicados: number;
+  rechazados: number;
+  sesionCaducada: boolean;
+}> {
   const pendientes = await escaneosPendientes();
   let enviados = 0;
   let duplicados = 0;
+  let rechazados = 0;
+  let sesionCaducada = false;
 
   for (const escaneo of pendientes) {
     try {
@@ -83,11 +91,24 @@ export async function sincronizarPendientes(): Promise<{ enviados: number; dupli
         body: JSON.stringify({ qr: escaneo.qr, eventId: escaneo.eventId }),
       });
 
-      if (!respuesta.ok) continue;
+      const datos = (await respuesta.json().catch(() => ({}))) as { resultado?: string };
+      const decision = decisionCola(respuesta.status, datos.resultado);
 
-      const datos = await respuesta.json();
+      if (decision === 'sesion') {
+        sesionCaducada = true;
+        break;
+      }
+
+      if (decision === 'reintentar') {
+        break;
+      }
+
       if (datos.resultado === 'duplicado') duplicados += 1;
-      else enviados += 1;
+      else if (datos.resultado === 'invalido' || datos.resultado === 'jti_expirado') {
+        rechazados += 1;
+      } else {
+        enviados += 1;
+      }
 
       if (escaneo.id !== undefined) await borrarEscaneo(escaneo.id);
     } catch {
@@ -96,5 +117,5 @@ export async function sincronizarPendientes(): Promise<{ enviados: number; dupli
     }
   }
 
-  return { enviados, duplicados };
+  return { enviados, duplicados, rechazados, sesionCaducada };
 }

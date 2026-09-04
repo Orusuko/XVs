@@ -25,12 +25,20 @@ function useConexion(): boolean {
 export function BannerConexion() {
   const enLinea = useConexion();
   const [pendientes, setPendientes] = useState(0);
+  const [sesionCaducada, setSesionCaducada] = useState(false);
+  const [rechazados, setRechazados] = useState(0);
 
   useEffect(() => {
     let activo = true;
 
     async function revisar() {
-      if (enLinea) await sincronizarPendientes();
+      if (enLinea) {
+        const resultado = await sincronizarPendientes();
+        if (activo) {
+          setSesionCaducada(resultado.sesionCaducada);
+          setRechazados(resultado.rechazados + resultado.duplicados);
+        }
+      }
       const cola = await escaneosPendientes();
       if (activo) setPendientes(cola.length);
     }
@@ -44,6 +52,22 @@ export function BannerConexion() {
       clearInterval(intervalo);
     };
   }, [enLinea]);
+
+  if (sesionCaducada) {
+    return (
+      <p role="alert" className="bg-oro-claro px-4 py-2 text-center text-sm text-tinta">
+        Tu sesión se acabó. Vuelve a entrar con tu PIN para enviar los escaneos guardados.
+      </p>
+    );
+  }
+
+  if (enLinea && pendientes === 0 && rechazados > 0) {
+    return (
+      <p role="status" className="bg-oro-claro px-4 py-2 text-center text-sm text-tinta">
+        Se enviaron los escaneos. {rechazados} no pasaron (duplicado o código viejo).
+      </p>
+    );
+  }
 
   if (enLinea && pendientes === 0) return null;
 
