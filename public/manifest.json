@@ -2,9 +2,18 @@
   "name": "Control de acceso XV años",
   "short_name": "Acceso XV",
   "description": "Escáner de boletos y conteo de aforo para la entrada del salón.",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#2a1424",
   "theme_color": "#2a1424",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
 }

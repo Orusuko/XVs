@@ -1,6 +1,7 @@
 import { NavegacionStaff } from '@/components/staff/NavegacionStaff';
 import { BannerConexion } from '@/components/staff/BannerConexion';
 import { RegistrarServiceWorker } from '@/components/staff/RegistrarServiceWorker';
+import { MetaPwaStaff } from '@/components/staff/MetaPwaStaff';
 
 export default async function StaffLayout({
   children,
@@ -13,6 +14,7 @@ export default async function StaffLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-tinta text-papel">
+      <MetaPwaStaff eventId={eventId} />
       <RegistrarServiceWorker />
       <BannerConexion />
       <div className="flex-1">{children}</div>

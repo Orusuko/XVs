@@ -28,6 +28,9 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "Invitaciones XV Años",
   description: "Invitaciones personalizadas, confirmación de asistencia y control de acceso.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -1,8 +1,8 @@
 // Keeps the staff shell openable when the venue loses signal. Check-in results
 // are never cached: those come from the queue in IndexedDB instead.
 
-const CACHE = 'xv-staff-v1';
-const BASE = ['/manifest.json'];
+const CACHE = 'xv-staff-v2';
+const BASE = ['/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(BASE)));
