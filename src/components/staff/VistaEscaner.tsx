@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { FichaEscaner, type Ficha } from '@/components/staff/FichaEscaner';
+import { EstadoHoja } from '@/components/ui/EstadoHoja';
 import { peekQrClaims } from '@/lib/qr/peek';
 import { buscarFamiliaLocal, encolarEscaneo } from '@/lib/offline/queue';
 
@@ -19,6 +21,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
   const [ficha, setFicha] = useState<Ficha | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [falloCamara, setFalloCamara] = useState<string | null>(null);
+  const [sesionCaducada, setSesionCaducada] = useState(false);
   const procesando = useRef(false);
   const qrActual = useRef<string | null>(null);
 
@@ -42,6 +45,11 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ qr, eventId }),
         });
+
+        if (respuesta.status === 401) {
+          setSesionCaducada(true);
+          return;
+        }
 
         const datos: RespuestaCheckin = await respuesta.json();
 
@@ -114,6 +122,12 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         body: JSON.stringify({ qr, eventId }),
       });
 
+      if (respuesta.status === 401) {
+        setSesionCaducada(true);
+        setConfirmando(false);
+        return;
+      }
+
       const datos: RespuestaCheckin = await respuesta.json();
 
       if (!respuesta.ok || datos.resultado !== 'exitoso') {
@@ -174,6 +188,43 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       lector?.stop().then(() => lector?.clear()).catch(() => {});
     };
   }, [previsualizar]);
+
+  useEffect(() => {
+    let activo = true;
+
+    async function revisarSesion() {
+      const respuesta = await fetch(`/api/staff/estado?eventId=${eventId}`, { cache: 'no-store' });
+      if (activo && respuesta.status === 401) setSesionCaducada(true);
+    }
+
+    const inmediato = setTimeout(() => void revisarSesion(), 0);
+    const intervalo = setInterval(() => void revisarSesion(), 30_000);
+
+    return () => {
+      activo = false;
+      clearTimeout(inmediato);
+      clearInterval(intervalo);
+    };
+  }, [eventId]);
+
+  if (sesionCaducada) {
+    return (
+      <EstadoHoja
+        tono="tinta"
+        etiqueta="Escáner"
+        titulo="Se cortó la sesión"
+        detalle="Vuelve a entrar con tu PIN para seguir registrando."
+        accion={
+          <Link
+            href={`/staff/${eventId}/login`}
+            className="inline-flex min-h-11 cursor-pointer items-center text-oro-claro underline underline-offset-4"
+          >
+            Entrar de nuevo
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 const SECCIONES = [
   { slug: 'conteo', etiqueta: 'Conteo' },
@@ -11,6 +11,13 @@ const SECCIONES = [
 
 export function NavegacionStaff({ eventId }: { eventId: string }) {
   const ruta = usePathname();
+  const router = useRouter();
+
+  async function salir() {
+    await fetch('/api/staff/logout', { method: 'POST' });
+    router.push(`/staff/${eventId}/login`);
+    router.refresh();
+  }
 
   return (
     <nav className="sticky bottom-0 z-40 border-t border-papel/15 bg-tinta">
@@ -33,6 +40,15 @@ export function NavegacionStaff({ eventId }: { eventId: string }) {
             </li>
           );
         })}
+        <li className="flex-1">
+          <button
+            type="button"
+            onClick={() => void salir()}
+            className="flex min-h-14 w-full cursor-pointer items-center justify-center text-sm tracking-wide text-papel/60 transition-colors duration-200 hover:text-papel"
+          >
+            Salir
+          </button>
+        </li>
       </ul>
     </nav>
   );
