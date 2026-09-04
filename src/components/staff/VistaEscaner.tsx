@@ -6,6 +6,7 @@ import { FichaEscaner, type Ficha } from '@/components/staff/FichaEscaner';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
 import { peekQrClaims } from '@/lib/qr/peek';
 import { buscarFamiliaLocal, encolarEscaneo } from '@/lib/offline/queue';
+import { mensajeFalloCamara } from '@/lib/staff/fallo-camara';
 
 const LECTOR_ID = 'lector-qr';
 
@@ -174,10 +175,8 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
           (texto) => void previsualizar(texto),
           () => {},
         );
-      } catch {
-        setFalloCamara(
-          'No pudimos abrir la cámara. Revisa los permisos o usa la búsqueda por nombre.',
-        );
+      } catch (error) {
+        setFalloCamara(mensajeFalloCamara(error));
       }
     }
 
