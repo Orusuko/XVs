@@ -89,3 +89,31 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request) {
+  const db = await supabaseServer();
+  const {
+    data: { user },
+  } = await db.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
+  }
+
+  const id = new URL(request.url).searchParams.get('id');
+  if (!id) {
+    return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
+  }
+
+  const { error } = await db.from('events').delete().eq('id', id);
+
+  if (error) {
+    console.error('events.delete', error.message);
+    return NextResponse.json(
+      { error: 'No pudimos eliminar el evento. Inténtalo de nuevo.' },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}

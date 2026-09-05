@@ -9,44 +9,31 @@ type Props = {
 };
 
 /**
- * Signature: the hero sits inside a nested gold hairline frame with
- * butterflies breaking out of its corners — a keepsake-card composition,
- * distinct from Clásica's open page and Jardín's numeral lockup.
+ * Signature: a symmetric geometric fan above a nested ink-and-gold frame —
+ * Poiret/Didact mood, distinct from Mariposas' hairline keepsake card.
  */
-export function MariposasTemplate({ token, invitacion }: Props) {
+export function DecoTemplate({ token, invitacion }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean) as string[];
-  const foto = invitacion.evento.templateConfig.foto_url;
   const tema = claseTema(evento.templateId);
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
       <article className="mx-auto w-full max-w-xl">
-        <div className="surgir surgir-1 relative">
-          <div className="marco-mariposas relative bg-papel-alto px-6 py-10 text-center">
-            {foto && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={foto}
-                alt=""
-                className="mx-auto mb-5 h-28 w-28 rounded-full border-2 border-oro object-cover"
-              />
-            )}
-
+        <header className="surgir surgir-1">
+          <AbanicoDeco className="mx-auto h-16 w-48" />
+          <div className="marco-deco mt-4 bg-papel-alto px-6 py-10 text-center">
             <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">
               Mis XV años
             </p>
-
-            <h1 className="mt-4 font-script text-6xl leading-[1.05] text-vino sm:text-7xl">
+            <h1 className="mt-4 font-display text-5xl leading-tight text-tinta sm:text-6xl">
               {evento.quinceanera}
             </h1>
-
             {padres.length > 0 && (
               <p className="mt-6 text-sm text-tinta-suave">
                 Con la bendición de {padres.join(' y ')}
               </p>
             )}
-
             {evento.padrinos.length > 0 && (
               <ul className="mt-3 space-y-1 text-sm text-tinta-suave">
                 {evento.padrinos.map((padrino) => (
@@ -58,10 +45,7 @@ export function MariposasTemplate({ token, invitacion }: Props) {
               </ul>
             )}
           </div>
-
-          <Mariposa className="absolute -right-4 -top-5 h-14 w-14 -rotate-12" />
-          <Mariposa className="absolute -bottom-5 -left-4 h-12 w-12 rotate-[160deg]" />
-        </div>
+        </header>
 
         <section className="surgir surgir-2 mt-10 border-y border-borde py-6 text-center">
           <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-tinta-suave">
@@ -100,30 +84,18 @@ export function MariposasTemplate({ token, invitacion }: Props) {
   );
 }
 
-function Mariposa({ className = '' }: { className?: string }) {
+function AbanicoDeco({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true" className={className}>
-      <path
-        d="M32 30c-4-14-16-20-22-16-6 4-4 18 8 20 6 1 11-1 14-4Z"
-        fill="var(--color-vino)"
-        opacity="0.55"
-      />
-      <path
-        d="M32 30c4-14 16-20 22-16 6 4 4 18-8 20-6 1-11-1-14-4Z"
-        fill="var(--color-oro)"
-        opacity="0.55"
-      />
-      <path
-        d="M32 32c-3 10-12 16-17 13-5-3-2-14 7-16 4-1 8 0 10 3Z"
-        fill="var(--color-vino)"
-        opacity="0.4"
-      />
-      <path
-        d="M32 32c3 10 12 16 17 13 5-3 2-14-7-16-4-1-8 0-10 3Z"
-        fill="var(--color-oro)"
-        opacity="0.4"
-      />
-      <rect x="30.5" y="20" width="3" height="24" rx="1.5" fill="var(--color-tinta)" opacity="0.7" />
+    <svg viewBox="0 0 200 64" fill="none" aria-hidden="true" className={className}>
+      <path d="M100 60 L12 8" stroke="var(--color-oro)" strokeWidth="1" />
+      <path d="M100 60 L40 4" stroke="var(--color-tinta)" strokeWidth="0.75" opacity="0.7" />
+      <path d="M100 60 L70 2" stroke="var(--color-oro)" strokeWidth="1" />
+      <path d="M100 60 L100 0" stroke="var(--color-vino)" strokeWidth="1.25" />
+      <path d="M100 60 L130 2" stroke="var(--color-oro)" strokeWidth="1" />
+      <path d="M100 60 L160 4" stroke="var(--color-tinta)" strokeWidth="0.75" opacity="0.7" />
+      <path d="M100 60 L188 8" stroke="var(--color-oro)" strokeWidth="1" />
+      <path d="M20 56 H180" stroke="var(--color-oro)" strokeWidth="1.5" />
+      <path d="M36 50 H164" stroke="var(--color-tinta)" strokeWidth="0.75" />
     </svg>
   );
 }

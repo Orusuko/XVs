@@ -9,36 +9,31 @@ type Props = {
 };
 
 /**
- * Signature: a numeral lockup ("XV" as a giant script glyph, "años" beneath
- * it) instead of putting the quinceañera's name in script — the name itself
- * stays in the display serif. Two-role type pairing, watercolor palette.
+ * Signature: a centered medallion with the XV monogram and a ribbon divider —
+ * ballroom invitation, distinct from Clásica's open plate and Jardín's lockup.
  */
-export function JardinTemplate({ token, invitacion }: Props) {
+export function ValsTemplate({ token, invitacion }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean) as string[];
   const tema = claseTema(evento.templateId);
 
   return (
-    <main className={`${tema} relative min-h-screen overflow-hidden px-5 py-12`}>
-      <RamoEsquina className="absolute -left-6 -top-6 h-40 w-40 opacity-90" />
-      <RamoEsquina className="absolute -bottom-6 -right-6 h-40 w-40 rotate-180 opacity-90" />
-
-      <article className="relative mx-auto w-full max-w-xl">
+    <main className={`${tema} min-h-screen px-5 py-12`}>
+      <article className="mx-auto w-full max-w-xl">
         <header className="surgir surgir-1 text-center">
-          <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">Mis</p>
-          <p className="-mt-2 font-script text-8xl leading-none text-vino">XV</p>
-          <p className="-mt-3 font-script text-4xl leading-none text-vino">años</p>
-
-          <h1 className="mt-5 font-display text-4xl leading-tight text-tinta">
+          <div className="relative mx-auto flex h-36 w-36 items-center justify-center">
+            <MedallonVals className="absolute inset-0 h-full w-full" />
+            <p className="relative font-script text-5xl leading-none text-vino">XV</p>
+          </div>
+          <CintaVals className="mx-auto mt-2 h-6 w-56" />
+          <h1 className="mt-5 font-script text-6xl leading-[1.05] text-vino sm:text-7xl">
             {evento.quinceanera}
           </h1>
-
           {padres.length > 0 && (
             <p className="mt-6 text-sm text-tinta-suave">
               Con la bendición de {padres.join(' y ')}
             </p>
           )}
-
           {evento.padrinos.length > 0 && (
             <ul className="mt-3 space-y-1 text-sm text-tinta-suave">
               {evento.padrinos.map((padrino) => (
@@ -88,13 +83,21 @@ export function JardinTemplate({ token, invitacion }: Props) {
   );
 }
 
-function RamoEsquina({ className = '' }: { className?: string }) {
+function MedallonVals({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 100 100" fill="none" aria-hidden="true" className={className}>
-      <path d="M8 8c18 2 30 14 32 32-18-2-30-14-32-32Z" fill="var(--color-borde)" opacity="0.7" />
-      <path d="M14 20c14 0 24 10 24 24-14 0-24-10-24-24Z" fill="var(--color-oro-claro)" opacity="0.6" />
-      <circle cx="16" cy="16" r="4" fill="var(--color-vino)" opacity="0.5" />
-      <circle cx="30" cy="30" r="3" fill="var(--color-oro)" opacity="0.6" />
+    <svg viewBox="0 0 120 120" fill="none" aria-hidden="true" className={className}>
+      <circle cx="60" cy="60" r="56" stroke="var(--color-oro)" strokeWidth="1.5" />
+      <circle cx="60" cy="60" r="48" stroke="var(--color-vino)" strokeWidth="0.75" />
+      <circle cx="60" cy="60" r="40" stroke="var(--color-oro)" strokeWidth="0.5" opacity="0.7" />
+    </svg>
+  );
+}
+
+function CintaVals({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 220 28" fill="none" aria-hidden="true" className={className}>
+      <path d="M8 14h204" stroke="var(--color-oro)" strokeWidth="1" />
+      <path d="M78 14 90 6h40l12 8-12 8H90l-12-8Z" fill="var(--color-vino)" opacity="0.35" />
     </svg>
   );
 }

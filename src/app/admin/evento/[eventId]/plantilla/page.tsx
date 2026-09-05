@@ -33,7 +33,7 @@ export default async function PlantillaPage({
 
   return (
     <main className="textura-papel min-h-screen px-5 py-14">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-6xl">
         <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">Plantilla</p>
         <h1 className="mt-3 font-display text-3xl text-tinta">Elige el diseño de la invitación</h1>
         <p className="mt-2 text-tinta-suave">

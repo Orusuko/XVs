@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CLAVE_TEMPLATE_CONFIG, PLANTILLAS, type TemplateId } from '@/lib/templates/catalogo';
+import {
+  CLAVE_TEMPLATE_CONFIG,
+  PLANTILLAS,
+  claseTema,
+  layoutDe,
+  type TemplateId,
+} from '@/lib/templates/catalogo';
 
 type Props = {
   eventId: string;
@@ -46,7 +52,7 @@ export function SelectorPlantilla({ eventId, nombreQuinceanera, templateConfig, 
 
   return (
     <div>
-      <div className="grid gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {PLANTILLAS.map((plantilla) => {
           const seleccionada = elegida === plantilla.id;
 
@@ -103,7 +109,8 @@ export function SelectorPlantilla({ eventId, nombreQuinceanera, templateConfig, 
  * template component, so choosing a card can never trigger a fetch or confirm.
  */
 function VistaPrevia({ id, nombre }: { id: TemplateId; nombre: string }) {
-  const clase = id === 'jardin' ? 'tema-jardin' : id === 'mariposas' ? 'tema-mariposas' : '';
+  const layout = layoutDe(id);
+  const clase = claseTema(id);
   const nombreVisible = nombre.trim() || 'Quinceañera';
 
   return (
@@ -111,7 +118,7 @@ function VistaPrevia({ id, nombre }: { id: TemplateId; nombre: string }) {
       className={`aspect-[3/4] w-full overflow-hidden rounded-[2px] border border-borde bg-papel ${clase}`}
     >
       <div className="flex h-full flex-col items-center justify-center gap-1 p-4 text-center">
-        {id === 'jardin' && (
+        {layout === 'jardin' && (
           <>
             <p className="font-script text-4xl leading-none text-vino">XV</p>
             <p className="font-script text-lg leading-none text-vino">años</p>
@@ -119,7 +126,7 @@ function VistaPrevia({ id, nombre }: { id: TemplateId; nombre: string }) {
           </>
         )}
 
-        {id === 'mariposas' && (
+        {layout === 'mariposas' && (
           <div className="marco-mariposas bg-papel-alto px-3 py-4">
             <p className="font-ticket text-[8px] uppercase tracking-[0.3em] text-oro">
               Mis XV años
@@ -128,7 +135,32 @@ function VistaPrevia({ id, nombre }: { id: TemplateId; nombre: string }) {
           </div>
         )}
 
-        {id === 'clasica' && (
+        {layout === 'clasica' && (
+          <>
+            <p className="font-ticket text-[8px] uppercase tracking-[0.3em] text-oro">
+              Mis XV años
+            </p>
+            <p className="mt-1 font-script text-3xl text-vino">{nombreVisible}</p>
+          </>
+        )}
+
+        {layout === 'vals' && (
+          <>
+            <p className="font-script text-4xl leading-none text-vino">XV</p>
+            <p className="mt-2 font-script text-2xl text-vino">{nombreVisible}</p>
+          </>
+        )}
+
+        {layout === 'deco' && (
+          <div className="marco-deco bg-papel-alto px-3 py-4">
+            <p className="font-ticket text-[8px] uppercase tracking-[0.3em] text-oro">
+              Mis XV años
+            </p>
+            <p className="mt-1 font-display text-lg text-tinta">{nombreVisible}</p>
+          </div>
+        )}
+
+        {layout === 'boho' && (
           <>
             <p className="font-ticket text-[8px] uppercase tracking-[0.3em] text-oro">
               Mis XV años

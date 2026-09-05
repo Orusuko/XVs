@@ -144,6 +144,220 @@ body {
   --color-borde: #e4cdee;
 }
 
+.tema-clasica-salvia {
+  --color-papel: #e8efe4;
+  --color-papel-alto: #f4f8f1;
+  --color-tinta: #243028;
+  --color-tinta-suave: #5a6b58;
+  --color-vino: #3d5a42;
+  --color-vino-hondo: #2a3f30;
+  --color-oro: #9a8438;
+  --color-oro-claro: #c4b06a;
+  --color-borde: #c5d0be;
+}
+
+.tema-clasica-medianoche {
+  --color-papel: #e8edf4;
+  --color-papel-alto: #f4f7fb;
+  --color-tinta: #1a2744;
+  --color-tinta-suave: #4a5a78;
+  --color-vino: #2c3e6b;
+  --color-vino-hondo: #1e2a4a;
+  --color-oro: #8a94a6;
+  --color-oro-claro: #b8c0cc;
+  --color-borde: #c4cad8;
+}
+
+.tema-jardin-durazno {
+  --color-papel: #f8ebe3;
+  --color-papel-alto: #fff6f1;
+  --color-tinta: #4a2e28;
+  --color-tinta-suave: #8a5a52;
+  --color-vino: #8b4a40;
+  --color-vino-hondo: #6a342e;
+  --color-oro: #d4a07a;
+  --color-oro-claro: #e8c4a8;
+  --color-borde: #e8d0c4;
+}
+
+.tema-jardin-menta {
+  --color-papel: #e6f2ee;
+  --color-papel-alto: #f4faf7;
+  --color-tinta: #1e3d38;
+  --color-tinta-suave: #4a7a70;
+  --color-vino: #2a6458;
+  --color-vino-hondo: #1e4a42;
+  --color-oro: #5a9084;
+  --color-oro-claro: #a8c9be;
+  --color-borde: #c5ddd6;
+}
+
+.tema-mariposas-rosa-antiguo {
+  --color-papel: #f3e8e6;
+  --color-papel-alto: #faf3f1;
+  --color-tinta: #4a3336;
+  --color-tinta-suave: #8a6b6e;
+  --color-vino: #8a5058;
+  --color-vino-hondo: #6a383e;
+  --color-oro: #c4a878;
+  --color-oro-claro: #d8c49a;
+  --color-borde: #e0d0ce;
+}
+
+.tema-mariposas-esmeralda {
+  --color-papel: #e8f0ea;
+  --color-papel-alto: #f4f8f5;
+  --color-tinta: #1a3d2e;
+  --color-tinta-suave: #4a7a62;
+  --color-vino: #2d6b4f;
+  --color-vino-hondo: #1e4a38;
+  --color-oro: #c4a84a;
+  --color-oro-claro: #d8c46a;
+  --color-borde: #c5d8cc;
+}
+
+.tema-mariposas-oro-rosa {
+  --color-papel: #f8eeea;
+  --color-papel-alto: #fff6f3;
+  --color-tinta: #4a2e2a;
+  --color-tinta-suave: #8a5a54;
+  --color-vino: #8b4a44;
+  --color-vino-hondo: #6a3430;
+  --color-oro: #c49070;
+  --color-oro-claro: #d8b0a0;
+  --color-borde: #e8d4cc;
+}
+
+.tema-vals-champan {
+  --color-papel: #f3ede4;
+  --color-papel-alto: #fbf7f0;
+  --color-tinta: #3a2e22;
+  --color-tinta-suave: #7a6a54;
+  --color-vino: #6b5428;
+  --color-vino-hondo: #4a3a1a;
+  --color-oro: #b89858;
+  --color-oro-claro: #d4bc80;
+  --color-borde: #ddd4c4;
+}
+
+.tema-vals-borgona {
+  --color-papel: #f3e8e6;
+  --color-papel-alto: #fbf4f2;
+  --color-tinta: #3a181c;
+  --color-tinta-suave: #7a4a50;
+  --color-vino: #7a1e32;
+  --color-vino-hondo: #541418;
+  --color-oro: #b8943c;
+  --color-oro-claro: #d0b060;
+  --color-borde: #e0c8c4;
+}
+
+.tema-vals-perla {
+  --color-papel: #eef0f2;
+  --color-papel-alto: #f8f9fa;
+  --color-tinta: #3a3e44;
+  --color-tinta-suave: #6a7078;
+  --color-vino: #4a5058;
+  --color-vino-hondo: #32363c;
+  --color-oro: #c4b888;
+  --color-oro-claro: #d8d0a8;
+  --color-borde: #d4d6d8;
+}
+
+.tema-vals-zafiro {
+  --color-papel: #e8eef6;
+  --color-papel-alto: #f4f7fc;
+  --color-tinta: #1a2a4a;
+  --color-tinta-suave: #4a5a80;
+  --color-vino: #2a4a8a;
+  --color-vino-hondo: #1a3268;
+  --color-oro: #8a9ab0;
+  --color-oro-claro: #b0bcc8;
+  --color-borde: #c8d4e4;
+}
+
+.tema-deco-negro-oro {
+  --color-papel: #f2ede4;
+  --color-papel-alto: #faf7f0;
+  --color-tinta: #1a1612;
+  --color-tinta-suave: #5a5048;
+  --color-vino: #1a1612;
+  --color-vino-hondo: #0d0b09;
+  --color-oro: #c4a030;
+  --color-oro-claro: #d8bc50;
+  --color-borde: #d4c8b0;
+}
+
+.tema-deco-jade {
+  --color-papel: #e6eee8;
+  --color-papel-alto: #f2f7f4;
+  --color-tinta: #14241c;
+  --color-tinta-suave: #4a6a58;
+  --color-vino: #2a5a48;
+  --color-vino-hondo: #1a3a30;
+  --color-oro: #b89440;
+  --color-oro-claro: #d0b060;
+  --color-borde: #c0d4c8;
+}
+
+.tema-deco-marfil-cobre {
+  --color-papel: #f4ede4;
+  --color-papel-alto: #fbf6f0;
+  --color-tinta: #2a1a12;
+  --color-tinta-suave: #6a4a38;
+  --color-vino: #8a4a2e;
+  --color-vino-hondo: #6a3420;
+  --color-oro: #c47848;
+  --color-oro-claro: #d89868;
+  --color-borde: #e0d0c0;
+}
+
+.tema-boho-terracota {
+  --color-papel: #ede4d4;
+  --color-papel-alto: #f6f0e4;
+  --color-tinta: #3a2a1a;
+  --color-tinta-suave: #6a5840;
+  --color-vino: #8a4028;
+  --color-vino-hondo: #6a2e1c;
+  --color-oro: #6a7048;
+  --color-oro-claro: #8a9060;
+  --color-borde: #d8c8b0;
+}
+
+.tema-boho-eucalipto {
+  --color-papel: #e8ebe4;
+  --color-papel-alto: #f4f5f0;
+  --color-tinta: #2a3228;
+  --color-tinta-suave: #5a6858;
+  --color-vino: #3e5a4c;
+  --color-vino-hondo: #2a4036;
+  --color-oro: #b07858;
+  --color-oro-claro: #c89878;
+  --color-borde: #c8d0c4;
+}
+
+.tema-boho-atardecer {
+  --color-papel: #f6e8e0;
+  --color-papel-alto: #fbf2ec;
+  --color-tinta: #3a2038;
+  --color-tinta-suave: #7a4a58;
+  --color-vino: #a04038;
+  --color-vino-hondo: #7a2e2a;
+  --color-oro: #d49840;
+  --color-oro-claro: #e8b860;
+  --color-borde: #e8d0c4;
+}
+
+.marco-vals {
+  border: 1px solid var(--color-oro);
+  box-shadow: 0 0 0 6px var(--color-papel-alto), 0 0 0 7px var(--color-borde);
+}
+
+.marco-deco {
+  border: 2px solid var(--color-oro);
+  box-shadow: 0 0 0 5px var(--color-papel-alto), 0 0 0 7px var(--color-tinta);
+}
+
 /* Mariposas' signature: the whole hero sits inside a nested gold hairline frame. */
 .marco-mariposas {
   border: 1px solid var(--color-oro);

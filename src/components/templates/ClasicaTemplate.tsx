@@ -1,5 +1,6 @@
 import { BloqueLugar } from '@/components/invitation/BloqueLugar';
 import { PanelConfirmacion } from '@/components/invitation/PanelConfirmacion';
+import { claseTema } from '@/lib/templates/catalogo';
 import type { InvitationView } from '@/lib/types';
 
 type Props = {
@@ -10,9 +11,10 @@ type Props = {
 export function ClasicaTemplate({ token, invitacion }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean) as string[];
+  const tema = claseTema(evento.templateId);
 
   return (
-    <main className="textura-papel min-h-screen px-5 py-12">
+    <main className={`${tema} textura-papel min-h-screen px-5 py-12`.trim()}>
       <article className="mx-auto w-full max-w-xl">
         <header className="surgir surgir-1 text-center">
           <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">
