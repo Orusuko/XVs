@@ -6,6 +6,7 @@ import type { InvitationView } from '@/lib/types';
 type Props = {
   token: string;
   invitacion: InvitationView;
+  sinConfirmacion?: boolean;
 };
 
 /**
@@ -13,7 +14,7 @@ type Props = {
  * it) instead of putting the quinceañera's name in script — the name itself
  * stays in the display serif. Two-role type pairing, watercolor palette.
  */
-export function JardinTemplate({ token, invitacion }: Props) {
+export function JardinTemplate({ token, invitacion, sinConfirmacion }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean) as string[];
   const tema = claseTema(evento.templateId);
@@ -80,9 +81,17 @@ export function JardinTemplate({ token, invitacion }: Props) {
           )}
         </div>
 
-        <div className="surgir surgir-5 mt-12 border-t border-borde pt-8">
-          <PanelConfirmacion token={token} invitacion={invitacion} />
-        </div>
+        {evento.vestimenta && (
+          <p className="surgir surgir-4 mt-8 text-center font-ticket text-sm text-tinta-suave">
+            Vestimenta: {evento.vestimenta}
+          </p>
+        )}
+
+        {!sinConfirmacion && (
+          <div className="surgir surgir-5 mt-12 border-t border-borde pt-8">
+            <PanelConfirmacion token={token} invitacion={invitacion} />
+          </div>
+        )}
       </article>
     </main>
   );

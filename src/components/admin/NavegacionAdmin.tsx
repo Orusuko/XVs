@@ -7,6 +7,7 @@ import { supabaseBrowser } from '@/lib/supabase/client';
 const PASOS = [
   { seg: 'datos', etiqueta: 'Datos' },
   { seg: 'plantilla', etiqueta: 'Plantilla' },
+  { seg: 'vista', etiqueta: 'Vista' },
   { seg: 'invitados', etiqueta: 'Invitados' },
 ] as const;
 

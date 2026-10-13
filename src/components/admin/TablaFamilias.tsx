@@ -17,6 +17,8 @@ type Props = {
   eventId: string;
   familiasIniciales: Familia[];
   siteUrl: string;
+  estadoInicial: string;
+  capacidadTotal: number | null;
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -25,17 +27,27 @@ const ETIQUETA_ESTADO: Record<string, string> = {
   rechazado: 'No asistirá',
 };
 
-export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
+export function TablaFamilias({
+  eventId,
+  familiasIniciales,
+  siteUrl,
+  estadoInicial,
+  capacidadTotal,
+}: Props) {
   const [familias, setFamilias] = useState<Familia[]>(familiasIniciales);
+  const [estado, setEstado] = useState(estadoInicial);
   const [borradores, setBorradores] = useState<Borrador[]>([
     { nombre_familia: '', boletos_total: '' },
   ]);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [edicion, setEdicion] = useState<Borrador | null>(null);
   const [capturando, setCapturando] = useState(familiasIniciales.length === 0);
   const [guardando, setGuardando] = useState(false);
+  const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // The organizer watches RSVPs land without refreshing. RLS scopes the stream
-  // to this organizer's own rows.
+  const publicado = estado === 'publicado';
+
   useEffect(() => {
     const cliente = supabaseBrowser();
     const canal = cliente
@@ -76,6 +88,36 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
     0,
   );
 
+  const superaAforo =
+    capacidadTotal != null && capacidadTotal > 0 && resumen.total > capacidadTotal;
+
+  async function cambiarEstadoEvento(nuevoEstado: 'publicado' | 'borrador') {
+    const mensaje =
+      nuevoEstado === 'publicado'
+        ? 'Las familias podrán abrir su enlace.'
+        : 'Los enlaces dejan de enviarse. Quien ya los tenga sigue pudiendo abrirlos.';
+    if (!window.confirm(mensaje)) return;
+
+    setPublicando(true);
+    setError(null);
+
+    const respuesta = await fetch('/api/events', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: eventId, estado: nuevoEstado }),
+    });
+
+    const datos = await respuesta.json().catch(() => null);
+    setPublicando(false);
+
+    if (!respuesta.ok) {
+      setError(datos?.error ?? 'No pudimos actualizar el evento.');
+      return;
+    }
+
+    setEstado(nuevoEstado);
+  }
+
   async function quitarFamilia(familia: Familia) {
     const confirma = window.confirm(`¿Quitar a la familia ${familia.nombre_familia} de la lista?`);
     if (!confirma) return;
@@ -90,6 +132,66 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
     }
 
     setFamilias((previas) => previas.filter((actual) => actual.id !== familia.id));
+  }
+
+  function iniciarEdicion(familia: Familia) {
+    setEditandoId(familia.id);
+    setEdicion({
+      nombre_familia: familia.nombre_familia,
+      boletos_total: String(familia.boletos_total),
+    });
+    setError(null);
+  }
+
+  function cancelarEdicion() {
+    setEditandoId(null);
+    setEdicion(null);
+  }
+
+  async function guardarEdicion(familia: Familia) {
+    if (!edicion) return;
+
+    const boletos = Number(edicion.boletos_total);
+    if (edicion.nombre_familia.trim() === '') {
+      setError('Escribe el nombre de la familia.');
+      return;
+    }
+    if (boletos < 1 || !Number.isInteger(boletos)) {
+      setError('Cada familia necesita al menos un boleto.');
+      return;
+    }
+
+    setError(null);
+
+    const respuesta = await fetch('/api/families', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: familia.id,
+        nombre_familia: edicion.nombre_familia.trim(),
+        boletos_total: boletos,
+      }),
+    });
+
+    const datos = await respuesta.json().catch(() => null);
+
+    if (!respuesta.ok) {
+      setError(datos?.error ?? 'No pudimos guardar los cambios.');
+      return;
+    }
+
+    setFamilias((previas) =>
+      previas.map((actual) =>
+        actual.id === familia.id
+          ? {
+              ...actual,
+              nombre_familia: edicion.nombre_familia.trim(),
+              boletos_total: boletos,
+            }
+          : actual,
+      ),
+    );
+    cancelarEdicion();
   }
 
   async function guardarBorradores() {
@@ -137,9 +239,39 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
     setCapturando(false);
   }
 
+  const barraPublicacion = (
+    <div className="mb-8 flex flex-wrap items-center gap-3">
+      {publicado ? (
+        <>
+          <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-exito">
+            Publicado
+          </span>
+          <Boton
+            type="button"
+            variante="contorno"
+            disabled={publicando}
+            onClick={() => cambiarEstadoEvento('borrador')}
+          >
+            Volver a borrador
+          </Boton>
+        </>
+      ) : (
+        <>
+          <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">
+            Borrador
+          </span>
+          <Boton type="button" disabled={publicando} onClick={() => cambiarEstadoEvento('publicado')}>
+            Publicar
+          </Boton>
+        </>
+      )}
+    </div>
+  );
+
   if (capturando) {
     return (
       <section>
+        {barraPublicacion}
         <div className="talon px-5 pb-6 pt-8">
           <div className="space-y-3">
             {borradores.map((fila, indice) => (
@@ -224,12 +356,27 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
 
   return (
     <section>
+      {barraPublicacion}
+
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato etiqueta="Boletos" valor={resumen.total} />
         <Dato etiqueta="Confirmados" valor={resumen.confirmados} acento />
         <Dato etiqueta="Pendientes" valor={resumen.pendientes} />
         <Dato etiqueta="No asistirán" valor={resumen.rechazados} />
       </dl>
+
+      {capacidadTotal != null && capacidadTotal > 0 && (
+        <p className={`mt-4 text-sm ${superaAforo ? 'text-alerta' : 'text-tinta-suave'}`}>
+          Boletos en lista: {resumen.total} / aforo {capacidadTotal}
+          {superaAforo && (
+            <span className="mt-1 block">La lista supera el aforo del salón.</span>
+          )}
+        </p>
+      )}
+
+      {!publicado && (
+        <p className="mt-4 text-sm text-tinta-suave">Publica el evento para enviar los enlaces.</p>
+      )}
 
       <div className="talon mt-6 overflow-x-auto px-5 pb-6 pt-8">
         <table className="w-full min-w-[640px] text-left text-sm">
@@ -245,11 +392,38 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
           <tbody>
             {familias.map((familia) => {
               const enlace = `${siteUrl}/invitacion/${familia.token}`;
+              const editando = editandoId === familia.id && edicion;
 
               return (
                 <tr key={familia.id} className="border-t border-borde">
-                  <td className="py-3 text-tinta">{familia.nombre_familia}</td>
-                  <td className="py-3 font-ticket text-tinta">{familia.boletos_total}</td>
+                  <td className="py-3 text-tinta">
+                    {editando ? (
+                      <input
+                        value={edicion.nombre_familia}
+                        onChange={(campo) =>
+                          setEdicion({ ...edicion, nombre_familia: campo.target.value })
+                        }
+                        className="min-h-11 w-full min-w-[140px] rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
+                      />
+                    ) : (
+                      familia.nombre_familia
+                    )}
+                  </td>
+                  <td className="py-3 font-ticket text-tinta">
+                    {editando ? (
+                      <input
+                        type="number"
+                        min={1}
+                        value={edicion.boletos_total}
+                        onChange={(campo) =>
+                          setEdicion({ ...edicion, boletos_total: campo.target.value })
+                        }
+                        className="min-h-11 w-24 rounded-[2px] border border-borde bg-papel px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
+                      />
+                    ) : (
+                      familia.boletos_total
+                    )}
+                  </td>
                   <td className="py-3">
                     <EstadoAsistencia estado={familia.estado_confirmacion} />
                   </td>
@@ -257,31 +431,68 @@ export function TablaFamilias({ eventId, familiasIniciales, siteUrl }: Props) {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => navigator.clipboard.writeText(enlace)}
-                        className="inline-flex h-11 cursor-pointer items-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                        disabled={!publicado}
+                        onClick={() => publicado && navigator.clipboard.writeText(enlace)}
+                        className="inline-flex h-11 cursor-pointer items-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo disabled:cursor-not-allowed disabled:no-underline disabled:opacity-40"
                       >
                         Copiar enlace
                       </button>
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(
-                          `Hola Familia ${familia.nombre_familia}, aquí está su invitación: ${enlace}`,
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-11 cursor-pointer items-center text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
-                      >
-                        WhatsApp
-                      </a>
+                      {publicado ? (
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            `Hola Familia ${familia.nombre_familia}, aquí está su invitación: ${enlace}`,
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-11 cursor-pointer items-center text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
+                        >
+                          WhatsApp
+                        </a>
+                      ) : (
+                        <span className="inline-flex h-11 items-center text-tinta-suave opacity-40">
+                          WhatsApp
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => quitarFamilia(familia)}
-                      className="inline-flex h-11 cursor-pointer items-center text-alerta underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
-                    >
-                      Quitar
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      {editando ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => guardarEdicion(familia)}
+                            className="inline-flex h-11 cursor-pointer items-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelarEdicion}
+                            className="inline-flex h-11 cursor-pointer items-center text-tinta-suave underline underline-offset-4 transition-colors duration-200 hover:text-vino"
+                          >
+                            Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => iniciarEdicion(familia)}
+                            className="inline-flex h-11 cursor-pointer items-center text-vino underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => quitarFamilia(familia)}
+                            className="inline-flex h-11 cursor-pointer items-center text-alerta underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
+                          >
+                            Quitar
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

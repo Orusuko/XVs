@@ -1,6 +1,11 @@
 import 'server-only';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { CLAVE_TEMPLATE_CONFIG, TEMPLATE_POR_DEFECTO, esTemplateId } from '@/lib/templates/catalogo';
+import {
+  CLAVE_TEMPLATE_CONFIG,
+  CLAVE_VESTIMENTA_CONFIG,
+  TEMPLATE_POR_DEFECTO,
+  esTemplateId,
+} from '@/lib/templates/catalogo';
 import type { EventRow, FamilyRow, InvitationView } from '@/lib/types';
 
 /**
@@ -65,6 +70,7 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
       recepcion: evento.recepcion,
       templateId: esTemplateId(plantillaElegida) ? plantillaElegida : TEMPLATE_POR_DEFECTO,
       templateConfig,
+      vestimenta: templateConfig[CLAVE_VESTIMENTA_CONFIG] || null,
     },
   };
 }

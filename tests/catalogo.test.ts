@@ -4,6 +4,8 @@ import {
   claseTema,
   esTemplateId,
   layoutDe,
+  layoutsUnicos,
+  plantillasDeLayout,
   type TemplateId,
 } from '@/lib/templates/catalogo';
 
@@ -28,17 +30,31 @@ const IDS_ESPERADOS: TemplateId[] = [
   'boho-terracota',
   'boho-eucalipto',
   'boho-atardecer',
+  'picado',
+  'corona',
+  'charra',
+  'retrato',
+  'celeste',
+  'editorial',
+  'vitela',
+  'itinerario',
 ];
 
 describe('catálogo de plantillas', () => {
-  test('tiene exactamente 20 diseños con ids únicos', () => {
-    expect(PLANTILLAS).toHaveLength(20);
+  test('tiene exactamente 28 diseños con ids únicos', () => {
+    expect(PLANTILLAS).toHaveLength(28);
     const ids = PLANTILLAS.map((p) => p.id);
-    expect(new Set(ids).size).toBe(20);
+    expect(new Set(ids).size).toBe(28);
     expect(ids.sort()).toEqual([...IDS_ESPERADOS].sort());
   });
 
-  test('esTemplateId acepta los 20 y rechaza basura', () => {
+  test('cada entrada tiene familia de filtro', () => {
+    for (const plantilla of PLANTILLAS) {
+      expect(['tradicion', 'jardin', 'gala', 'moderna']).toContain(plantilla.familia);
+    }
+  });
+
+  test('esTemplateId acepta los 28 y rechaza basura', () => {
     for (const id of IDS_ESPERADOS) {
       expect(esTemplateId(id)).toBe(true);
     }
@@ -70,6 +86,28 @@ describe('catálogo de plantillas', () => {
     expect(layoutDe('boho-terracota')).toBe('boho');
     expect(layoutDe('boho-eucalipto')).toBe('boho');
     expect(layoutDe('boho-atardecer')).toBe('boho');
+    expect(layoutDe('picado')).toBe('picado');
+    expect(layoutDe('corona')).toBe('corona');
+    expect(layoutDe('charra')).toBe('charra');
+    expect(layoutDe('retrato')).toBe('retrato');
+    expect(layoutDe('celeste')).toBe('celeste');
+    expect(layoutDe('editorial')).toBe('editorial');
+    expect(layoutDe('vitela')).toBe('vitela');
+    expect(layoutDe('itinerario')).toBe('itinerario');
+  });
+
+  test('plantillasDeLayout agrupa variantes', () => {
+    expect(plantillasDeLayout('clasica').map((p) => p.id)).toEqual([
+      'clasica',
+      'clasica-salvia',
+      'clasica-medianoche',
+    ]);
+    expect(plantillasDeLayout('picado').map((p) => p.id)).toEqual(['picado']);
+  });
+
+  test('layoutsUnicos no repite layout', () => {
+    expect(layoutsUnicos('todas')).toHaveLength(14);
+    expect(layoutsUnicos('moderna')).toEqual(['retrato', 'editorial']);
   });
 
   test('claseTema: clasica sin clase; el resto tema-<id>', () => {
@@ -78,5 +116,7 @@ describe('catálogo de plantillas', () => {
     expect(claseTema('jardin')).toBe('tema-jardin');
     expect(claseTema('jardin-menta')).toBe('tema-jardin-menta');
     expect(claseTema('vals-zafiro')).toBe('tema-vals-zafiro');
+    expect(claseTema('picado')).toBe('tema-picado');
+    expect(claseTema('itinerario')).toBe('tema-itinerario');
   });
 });

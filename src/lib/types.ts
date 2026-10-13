@@ -82,5 +82,6 @@ export type InvitationView = {
     recepcion: Lugar | null;
     templateId: TemplateId;
     templateConfig: Record<string, string>;
+    vestimenta: string | null;
   };
 };

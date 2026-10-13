@@ -9,12 +9,13 @@ type Props = {
   etiqueta: string;
   lugar: Lugar;
   quinceanera: string;
+  className?: string;
 };
 
 const ACCION =
   'inline-flex h-11 cursor-pointer items-center gap-2 px-1 text-sm leading-none transition-colors duration-200';
 
-export function BloqueLugar({ etiqueta, lugar, quinceanera }: Props) {
+export function BloqueLugar({ etiqueta, lugar, quinceanera, className = '' }: Props) {
   const inicio = new Date(lugar.fecha_hora);
   const valida = !Number.isNaN(inicio.getTime());
 
@@ -37,7 +38,7 @@ export function BloqueLugar({ etiqueta, lugar, quinceanera }: Props) {
   }
 
   return (
-    <section className="border-t border-borde pt-6">
+    <section className={`border-t border-borde pt-6 ${className}`.trim()}>
       <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro">{etiqueta}</p>
 
       <h3 className="mt-2 font-display text-2xl leading-tight text-tinta">{lugar.nombre}</h3>

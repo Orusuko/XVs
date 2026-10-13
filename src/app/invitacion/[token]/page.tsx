@@ -1,29 +1,12 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { loadInvitation } from '@/lib/invitation';
-import { BohoTemplate } from '@/components/templates/BohoTemplate';
-import { ClasicaTemplate } from '@/components/templates/ClasicaTemplate';
-import { DecoTemplate } from '@/components/templates/DecoTemplate';
-import { JardinTemplate } from '@/components/templates/JardinTemplate';
-import { MariposasTemplate } from '@/components/templates/MariposasTemplate';
-import { ValsTemplate } from '@/components/templates/ValsTemplate';
-import { layoutDe, type LayoutId } from '@/lib/templates/catalogo';
-import type { InvitationView } from '@/lib/types';
+import { layoutDe } from '@/lib/templates/catalogo';
+import { POR_LAYOUT } from '@/lib/templates/por-layout';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ token: string }> };
-
-type PlantillaProps = { token: string; invitacion: InvitationView };
-
-const POR_LAYOUT: Record<LayoutId, (props: PlantillaProps) => React.JSX.Element> = {
-  clasica: ClasicaTemplate,
-  jardin: JardinTemplate,
-  mariposas: MariposasTemplate,
-  vals: ValsTemplate,
-  deco: DecoTemplate,
-  boho: BohoTemplate,
-};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params;

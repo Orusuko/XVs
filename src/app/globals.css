@@ -348,6 +348,128 @@ body {
   --color-borde: #e8d0c4;
 }
 
+.tema-picado {
+  --color-papel: #f7ecd8;
+  --color-papel-alto: #fff8ee;
+  --color-tinta: #1a2450;
+  --color-tinta-suave: #5a3a58;
+  --color-vino: #c41e5c;
+  --color-vino-hondo: #8a1440;
+  --color-oro: #2b3d8f;
+  --color-oro-claro: #5a6ab8;
+  --color-borde: #e8c8a8;
+}
+
+.tema-corona {
+  --color-papel: #f7f0e8;
+  --color-papel-alto: #fffaf4;
+  --color-tinta: #3a2a28;
+  --color-tinta-suave: #8a6a68;
+  --color-vino: #8a4a58;
+  --color-vino-hondo: #6a3440;
+  --color-oro: #c4a04a;
+  --color-oro-claro: #d8bc70;
+  --color-borde: #e4d4c4;
+}
+
+.tema-charra {
+  --color-papel: #f4ead8;
+  --color-papel-alto: #fbf4e8;
+  --color-tinta: #1a2040;
+  --color-tinta-suave: #5a4a48;
+  --color-vino: #8b1e2e;
+  --color-vino-hondo: #64141e;
+  --color-oro: #2a3a7a;
+  --color-oro-claro: #5a6aa0;
+  --color-borde: #dcc8a8;
+}
+
+.tema-retrato {
+  --color-papel: #f0eeea;
+  --color-papel-alto: #faf8f4;
+  --color-tinta: #2a2a28;
+  --color-tinta-suave: #6a6a66;
+  --color-vino: #3a3a38;
+  --color-vino-hondo: #1e1e1c;
+  --color-oro: #8a8a86;
+  --color-oro-claro: #b4b4b0;
+  --color-borde: #d4d2cc;
+}
+
+.tema-celeste {
+  --color-papel: #e8eef4;
+  --color-papel-alto: #f4f7fb;
+  --color-tinta: #1a2848;
+  --color-tinta-suave: #4a5a78;
+  --color-vino: #1e3a6e;
+  --color-vino-hondo: #142850;
+  --color-oro: #c4a04a;
+  --color-oro-claro: #d8bc70;
+  --color-borde: #c4d0dc;
+}
+
+.tema-editorial {
+  --color-papel: #f3efe6;
+  --color-papel-alto: #faf7f0;
+  --color-tinta: #1c1814;
+  --color-tinta-suave: #5a4e44;
+  --color-vino: #1c1814;
+  --color-vino-hondo: #0e0c0a;
+  --color-oro: #b06a3c;
+  --color-oro-claro: #c88858;
+  --color-borde: #d8d0c4;
+}
+
+.tema-vitela {
+  --color-papel: #f4f2f6;
+  --color-papel-alto: #fcfafd;
+  --color-tinta: #3a3e38;
+  --color-tinta-suave: #6a7068;
+  --color-vino: #6a7a68;
+  --color-vino-hondo: #4a5848;
+  --color-oro: #8a7aa8;
+  --color-oro-claro: #b0a4c4;
+  --color-borde: #d8d4e0;
+}
+
+.tema-itinerario {
+  --color-papel: #f4ecf1;
+  --color-papel-alto: #fbf6f9;
+  --color-tinta: #2a1424;
+  --color-tinta-suave: #6b4a60;
+  --color-vino: #7b2d5e;
+  --color-vino-hondo: #55193f;
+  --color-oro: #a97722;
+  --color-oro-claro: #d9b25f;
+  --color-borde: #dcc5d5;
+}
+
+.arco-corona {
+  border: 1.5px solid var(--color-oro);
+  border-bottom: 0;
+  border-radius: 180px 180px 0 0;
+}
+
+.franja-zarape {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--color-vino) 0 10px,
+    var(--color-oro) 10px 18px,
+    var(--color-papel-alto) 18px 24px,
+    var(--color-tinta) 24px 28px
+  );
+}
+
+.marco-retrato {
+  border: 1px solid var(--color-borde);
+}
+
+.capa-vitela {
+  background: color-mix(in srgb, var(--color-papel-alto) 72%, transparent);
+  border: 1px solid var(--color-borde);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-papel) 80%, transparent);
+}
+
 .marco-vals {
   border: 1px solid var(--color-oro);
   box-shadow: 0 0 0 6px var(--color-papel-alto), 0 0 0 7px var(--color-borde);

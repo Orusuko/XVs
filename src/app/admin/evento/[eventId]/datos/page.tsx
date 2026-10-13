@@ -21,7 +21,7 @@ export default async function DatosEventoPage({
   const { data: evento } = await db
     .from('events')
     .select(
-      'id, quinceanera_nombre, padre, madre, padrinos, mensaje, misa, recepcion, capacidad_total',
+      'id, quinceanera_nombre, padre, madre, padrinos, mensaje, misa, recepcion, capacidad_total, template_config',
     )
     .eq('id', eventId)
     .maybeSingle<
@@ -36,6 +36,7 @@ export default async function DatosEventoPage({
         | 'misa'
         | 'recepcion'
         | 'capacidad_total'
+        | 'template_config'
       >
     >();
 

@@ -1,11 +1,12 @@
 import { BloqueLugar } from '@/components/invitation/BloqueLugar';
 import { PanelConfirmacion } from '@/components/invitation/PanelConfirmacion';
-import { claseTema } from '@/lib/templates/catalogo';
+import { CLAVE_FOTO_CONFIG, claseTema } from '@/lib/templates/catalogo';
 import type { InvitationView } from '@/lib/types';
 
 type Props = {
   token: string;
   invitacion: InvitationView;
+  sinConfirmacion?: boolean;
 };
 
 /**
@@ -13,10 +14,10 @@ type Props = {
  * butterflies breaking out of its corners — a keepsake-card composition,
  * distinct from Clásica's open page and Jardín's numeral lockup.
  */
-export function MariposasTemplate({ token, invitacion }: Props) {
+export function MariposasTemplate({ token, invitacion, sinConfirmacion }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean) as string[];
-  const foto = invitacion.evento.templateConfig.foto_url;
+  const foto = invitacion.evento.templateConfig[CLAVE_FOTO_CONFIG];
   const tema = claseTema(evento.templateId);
 
   return (
@@ -92,9 +93,17 @@ export function MariposasTemplate({ token, invitacion }: Props) {
           )}
         </div>
 
-        <div className="surgir surgir-5 mt-12 border-t border-borde pt-8">
-          <PanelConfirmacion token={token} invitacion={invitacion} />
-        </div>
+        {evento.vestimenta && (
+          <p className="surgir surgir-4 mt-8 text-center font-ticket text-sm text-tinta-suave">
+            Vestimenta: {evento.vestimenta}
+          </p>
+        )}
+
+        {!sinConfirmacion && (
+          <div className="surgir surgir-5 mt-12 border-t border-borde pt-8">
+            <PanelConfirmacion token={token} invitacion={invitacion} />
+          </div>
+        )}
       </article>
     </main>
   );

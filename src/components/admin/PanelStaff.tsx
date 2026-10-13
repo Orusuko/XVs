@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { Boton } from '@/components/ui/Boton';
 
 /** Door PINs for the night of the event, plus the link the staff will open. */
-export function PanelStaff({ eventId }: { eventId: string }) {
+export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: string }) {
   const [nombre, setNombre] = useState('');
   const [pin, setPin] = useState('');
   const [creando, setCreando] = useState(false);
   const [creados, setCreados] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+
+  const urlEntrada = `${siteUrl}/staff/${eventId}/login`;
 
   async function crear(evento: React.FormEvent) {
     evento.preventDefault();
@@ -91,15 +94,30 @@ export function PanelStaff({ eventId }: { eventId: string }) {
         </p>
       )}
 
-      <p className="mt-6 text-sm text-tinta-suave">
-        Enlace para la entrada:{' '}
-        <Link
-          href={`/staff/${eventId}/login`}
-          className="cursor-pointer text-vino underline underline-offset-4"
+      <div className="mt-6 space-y-3">
+        <p className="text-sm text-tinta-suave">
+          Enlace para la entrada:{' '}
+          <Link
+            href={`/staff/${eventId}/login`}
+            className="cursor-pointer break-all text-vino underline underline-offset-4"
+          >
+            {urlEntrada}
+          </Link>
+        </p>
+        <Boton
+          type="button"
+          variante="contorno"
+          className="min-h-11"
+          onClick={async () => {
+            await navigator.clipboard.writeText(urlEntrada);
+            setEnlaceCopiado(true);
+            window.setTimeout(() => setEnlaceCopiado(false), 2500);
+          }}
         >
-          /staff/{eventId}/login
-        </Link>
-      </p>
+          Copiar enlace de la entrada
+        </Boton>
+        {enlaceCopiado && <p className="text-sm text-exito">Enlace copiado.</p>}
+      </div>
     </section>
   );
 }

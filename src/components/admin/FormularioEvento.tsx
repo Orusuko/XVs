@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Boton } from '@/components/ui/Boton';
 import { SelectorMensaje } from '@/components/admin/SelectorMensaje';
 import { MENSAJES_INVITACION, esMensajeCatalogo } from '@/lib/mensajes-invitacion';
+import { CLAVE_FOTO_CONFIG, CLAVE_VESTIMENTA_CONFIG } from '@/lib/templates/catalogo';
 import type { EventRow, Lugar, Padrino } from '@/lib/types';
 
 const LUGAR_VACIO: Lugar = { nombre: '', direccion: '', maps_url: '', fecha_hora: '' };
@@ -21,6 +22,7 @@ type Props = {
     | 'misa'
     | 'recepcion'
     | 'capacidad_total'
+    | 'template_config'
   >;
 };
 
@@ -46,8 +48,15 @@ export function FormularioEvento({ evento }: Props) {
   const [misa, setMisa] = useState<Lugar>(evento?.misa ?? LUGAR_VACIO);
   const [recepcion, setRecepcion] = useState<Lugar>(evento?.recepcion ?? LUGAR_VACIO);
   const [capacidad, setCapacidad] = useState(evento?.capacidad_total?.toString() ?? '');
+  const [fotoUrl, setFotoUrl] = useState(evento?.template_config?.[CLAVE_FOTO_CONFIG] ?? '');
+  const [vestimenta, setVestimenta] = useState(
+    evento?.template_config?.[CLAVE_VESTIMENTA_CONFIG] ?? '',
+  );
+  const [fotoPreviewRota, setFotoPreviewRota] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const mostrarPreviewFoto = /^https:\/\//.test(fotoUrl.trim()) && !fotoPreviewRota;
 
   async function guardar(formEvent: React.FormEvent) {
     formEvent.preventDefault();
@@ -66,6 +75,11 @@ export function FormularioEvento({ evento }: Props) {
         ? { ...recepcion, fecha_hora: aIso(recepcion.fecha_hora) }
         : null,
       capacidad_total: capacidad ? Number(capacidad) : null,
+      template_config: {
+        ...(evento?.template_config ?? {}),
+        [CLAVE_FOTO_CONFIG]: fotoUrl.trim(),
+        [CLAVE_VESTIMENTA_CONFIG]: vestimenta.trim(),
+      },
     };
 
     const respuesta = await fetch('/api/events', {
@@ -90,6 +104,37 @@ export function FormularioEvento({ evento }: Props) {
     <form onSubmit={guardar} className="space-y-10">
       <Seccion titulo="La quinceañera">
         <Campo etiqueta="Nombre" valor={quinceanera} onCambio={setQuinceanera} requerido />
+        <div>
+          <Campo
+            etiqueta="Foto de la quinceañera"
+            valor={fotoUrl}
+            onCambio={(valor) => {
+              setFotoUrl(valor);
+              setFotoPreviewRota(false);
+            }}
+            ayuda="Sube la foto a Drive o Imgur, abre la imagen a pantalla completa y pega el enlace que termina en .jpg o .png."
+          />
+          {mostrarPreviewFoto && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={fotoUrl.trim()}
+              alt=""
+              className="mt-3 aspect-[4/5] max-h-48 w-auto object-cover"
+              onError={() => setFotoPreviewRota(true)}
+            />
+          )}
+          {fotoPreviewRota && /^https:\/\//.test(fotoUrl.trim()) && (
+            <p className="mt-2 text-sm text-alerta">
+              Este enlace no muestra una imagen. Prueba otro.
+            </p>
+          )}
+        </div>
+        <Campo
+          etiqueta="Código de vestimenta"
+          valor={vestimenta}
+          onCambio={setVestimenta}
+          placeholder="Formal, no blanco"
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo etiqueta="Padre" valor={padre} onCambio={setPadre} />
           <Campo etiqueta="Madre" valor={madre} onCambio={setMadre} />
@@ -241,6 +286,7 @@ function Campo({
   tipo = 'text',
   requerido = false,
   ayuda,
+  placeholder,
   idPrefijo = 'campo',
 }: {
   etiqueta: string;
@@ -249,6 +295,7 @@ function Campo({
   tipo?: string;
   requerido?: boolean;
   ayuda?: string;
+  placeholder?: string;
   idPrefijo?: string;
 }) {
   const id = `${idPrefijo}-${etiqueta}`.toLowerCase().replace(/\s+/g, '-');
@@ -262,6 +309,7 @@ function Campo({
         id={id}
         type={tipo}
         required={requerido}
+        placeholder={placeholder}
         value={valor}
         onChange={(campo) => onCambio(campo.target.value)}
         className="mt-1 min-h-11 w-full rounded-[2px] border border-borde bg-papel-alto px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"

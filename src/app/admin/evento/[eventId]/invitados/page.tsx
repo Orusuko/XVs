@@ -22,9 +22,11 @@ export default async function InvitadosPage({
 
   const { data: evento } = await db
     .from('events')
-    .select('id, quinceanera_nombre, capacidad_total')
+    .select('id, quinceanera_nombre, capacidad_total, estado')
     .eq('id', eventId)
-    .maybeSingle<Pick<EventRow, 'id' | 'quinceanera_nombre' | 'capacidad_total'>>();
+    .maybeSingle<
+      Pick<EventRow, 'id' | 'quinceanera_nombre' | 'capacidad_total' | 'estado'>
+    >();
 
   if (!evento) notFound();
 
@@ -53,11 +55,13 @@ export default async function InvitadosPage({
             eventId={eventId}
             familiasIniciales={familias ?? []}
             siteUrl={siteUrl()}
+            estadoInicial={evento.estado}
+            capacidadTotal={evento.capacidad_total}
           />
         </div>
 
         <div className="mt-14 border-t border-borde pt-8">
-          <PanelStaff eventId={eventId} />
+          <PanelStaff eventId={eventId} siteUrl={siteUrl()} />
         </div>
       </div>
     </main>

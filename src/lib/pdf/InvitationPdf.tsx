@@ -1,6 +1,6 @@
 import { Circle, Document, Image, Link, Page, Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
-import { formatearFecha, formatearHora } from '@/lib/format';
-import { layoutDe, type TemplateId } from '@/lib/templates/catalogo';
+import { formatearFecha, formatearHora, partesFecha } from '@/lib/format';
+import { CLAVE_FOTO_CONFIG, layoutDe, type TemplateId } from '@/lib/templates/catalogo';
 import type { InvitationView, Lugar } from '@/lib/types';
 
 type Paleta = {
@@ -217,6 +217,86 @@ const PALETAS: Record<TemplateId, Paleta> = {
     oro: '#D49840',
     borde: '#E8D0C4',
   },
+  picado: {
+    papel: '#F7ECD8',
+    papelAlto: '#FFF8EE',
+    tinta: '#1A2450',
+    tintaSuave: '#5A3A58',
+    vino: '#C41E5C',
+    vinoHondo: '#8A1440',
+    oro: '#2B3D8F',
+    borde: '#E8C8A8',
+  },
+  corona: {
+    papel: '#F7F0E8',
+    papelAlto: '#FFFAF4',
+    tinta: '#3A2A28',
+    tintaSuave: '#8A6A68',
+    vino: '#8A4A58',
+    vinoHondo: '#6A3440',
+    oro: '#C4A04A',
+    borde: '#E4D4C4',
+  },
+  charra: {
+    papel: '#F4EAD8',
+    papelAlto: '#FBF4E8',
+    tinta: '#1A2040',
+    tintaSuave: '#5A4A48',
+    vino: '#8B1E2E',
+    vinoHondo: '#64141E',
+    oro: '#2A3A7A',
+    borde: '#DCC8A8',
+  },
+  retrato: {
+    papel: '#F0EEEA',
+    papelAlto: '#FAF8F4',
+    tinta: '#2A2A28',
+    tintaSuave: '#6A6A66',
+    vino: '#3A3A38',
+    vinoHondo: '#1E1E1C',
+    oro: '#8A8A86',
+    borde: '#D4D2CC',
+  },
+  celeste: {
+    papel: '#E8EEF4',
+    papelAlto: '#F4F7FB',
+    tinta: '#1A2848',
+    tintaSuave: '#4A5A78',
+    vino: '#1E3A6E',
+    vinoHondo: '#142850',
+    oro: '#C4A04A',
+    borde: '#C4D0DC',
+  },
+  editorial: {
+    papel: '#F3EFE6',
+    papelAlto: '#FAF7F0',
+    tinta: '#1C1814',
+    tintaSuave: '#5A4E44',
+    vino: '#1C1814',
+    vinoHondo: '#0E0C0A',
+    oro: '#B06A3C',
+    borde: '#D8D0C4',
+  },
+  vitela: {
+    papel: '#F4F2F6',
+    papelAlto: '#FCFAFD',
+    tinta: '#3A3E38',
+    tintaSuave: '#6A7068',
+    vino: '#6A7A68',
+    vinoHondo: '#4A5848',
+    oro: '#8A7AA8',
+    borde: '#D8D4E0',
+  },
+  itinerario: {
+    papel: '#F4ECF1',
+    papelAlto: '#FBF6F9',
+    tinta: '#2A1424',
+    tintaSuave: '#6B4A60',
+    vino: '#7B2D5E',
+    vinoHondo: '#55193F',
+    oro: '#A97722',
+    borde: '#DCC5D5',
+  },
 };
 
 function crearEstilos(paleta: Paleta) {
@@ -307,6 +387,26 @@ function crearEstilos(paleta: Paleta) {
       borderWidth: 2,
       borderColor: paleta.oro,
     },
+    fotoAncha: {
+      width: '100%',
+      height: 220,
+      marginBottom: 12,
+      objectFit: 'cover',
+    },
+    diaEditorial: {
+      fontFamily: 'SpaceMono',
+      fontWeight: 700,
+      fontSize: 64,
+      color: paleta.vino,
+      lineHeight: 1,
+    },
+    columna: {
+      marginTop: 24,
+      paddingLeft: 14,
+      borderLeftWidth: 2,
+      borderLeftColor: paleta.oro,
+    },
+    bloqueColumna: { marginTop: 16 },
   });
 }
 
@@ -419,7 +519,71 @@ function AbanicoDecoPdf({ paleta }: { paleta: Paleta }) {
   );
 }
 
-/** Same branch silhouette as `RamaBoho` in BohoTemplate. */
+/** Same cut-paper silhouette as `BannerPicado`. */
+const PUNTOS_PICADO = [20, 60, 100, 140, 180, 220, 260, 300];
+const FLECO_PICADO = `M0 20h320v6${'l-20 10-20-10'.repeat(8)}V20Z`;
+
+function BannerPicadoPdf({ paleta }: { paleta: Paleta }) {
+  return (
+    <Svg width={400} height={28} viewBox="0 0 320 36">
+      <Path d="M0 0h320v20H0Z" fill={paleta.vino} />
+      <Path d={FLECO_PICADO} fill={paleta.oro} />
+      {PUNTOS_PICADO.map((x) => (
+        <Path
+          key={x}
+          d={`M${x} 3l8 8-8 8-8-8ZM${x - 1} 21h2v3h3v2h-3v3h-2v-3h-3v-2h3Z`}
+          fill={paleta.papel}
+        />
+      ))}
+    </Svg>
+  );
+}
+
+function TiaraPdf({ paleta }: { paleta: Paleta }) {
+  return (
+    <Svg width={40} height={26} viewBox="0 0 48 32">
+      <Path
+        d="M4 26 12 10l12 12 12-12 8 16H4Z"
+        stroke={paleta.oro}
+        strokeWidth={1.4}
+        fill={paleta.oro}
+        fillOpacity={0.25}
+      />
+      <Circle cx={24} cy={8} r={2.4} fill={paleta.oro} />
+    </Svg>
+  );
+}
+
+function HerraduraPdf({ paleta }: { paleta: Paleta }) {
+  return (
+    <Svg width={48} height={48} viewBox="0 0 64 64">
+      <Path
+        d="M16 12c-8 8-8 32 0 40 4 4 10 6 16 2M48 12c8 8 8 32 0 40-4 4-10 6-16 2"
+        stroke={paleta.vino}
+        strokeWidth={3}
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+function LunaPdf({ paleta }: { paleta: Paleta }) {
+  return (
+    <Svg width={56} height={56} viewBox="0 0 80 80">
+      <Path d="M48 16a28 28 0 1 0 0 48 22 22 0 0 1 0-48Z" fill={paleta.oro} opacity={0.85} />
+    </Svg>
+  );
+}
+
+function SelloLacrePdf({ paleta }: { paleta: Paleta }) {
+  return (
+    <Svg width={36} height={36} viewBox="0 0 64 64">
+      <Circle cx={32} cy={32} r={28} fill={paleta.vino} />
+      <Circle cx={32} cy={32} r={22} stroke={paleta.oro} strokeWidth={1} fill="none" />
+    </Svg>
+  );
+}
+
 function RamaBohoPdf({ paleta, espejo = false }: { paleta: Paleta; espejo?: boolean }) {
   return (
     <Svg
@@ -446,12 +610,12 @@ export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
   const padres = [evento.padre, evento.madre].filter(Boolean).join(' y ');
   const paleta = PALETAS[evento.templateId];
   const estilos = crearEstilos(paleta);
-  const foto = evento.templateConfig.foto_url;
+  const foto = evento.templateConfig[CLAVE_FOTO_CONFIG];
   const layout = layoutDe(evento.templateId);
 
   return (
     <Document title={`Invitación XV años de ${evento.quinceanera}`}>
-      <Page size="A4" style={estilos.page}>
+      <Page size="A4" style={layout === 'vitela' ? [estilos.page, { paddingVertical: 72 }] : estilos.page}>
         {layout === 'jardin' && (
           <View style={{ position: 'absolute', top: 24, left: 24 }}>
             <RamoEsquinaPdf paleta={paleta} />
@@ -483,12 +647,33 @@ export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
             <RamaBohoPdf paleta={paleta} espejo />
           </View>
         )}
-
+        {layout === 'picado' && (
+          <View style={{ marginBottom: 8 }}>
+            <BannerPicadoPdf paleta={paleta} />
+          </View>
+        )}
+        {layout === 'corona' && (
+          <View style={{ alignItems: 'center', marginBottom: 4 }}>
+            <TiaraPdf paleta={paleta} />
+          </View>
+        )}
+        {layout === 'charra' && (
+          <View style={{ alignItems: 'center', marginBottom: 4 }}>
+            <HerraduraPdf paleta={paleta} />
+          </View>
+        )}
+        {layout === 'celeste' && (
+          <View style={{ alignItems: 'center', marginBottom: 4 }}>
+            <LunaPdf paleta={paleta} />
+          </View>
+        )}
         <Encabezado
           templateId={evento.templateId}
           estilos={estilos}
           quinceanera={evento.quinceanera}
           foto={foto}
+          fechaIso={(evento.recepcion ?? evento.misa)?.fecha_hora}
+          paleta={paleta}
         />
 
         {padres ? (
@@ -525,9 +710,40 @@ export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
           <Text style={[estilos.centrado, estilos.sutil, { marginTop: 24 }]}>{evento.mensaje}</Text>
         ) : null}
 
-        {evento.misa ? <BloqueLugarPdf etiqueta="Misa" lugar={evento.misa} estilos={estilos} /> : null}
-        {evento.recepcion ? (
-          <BloqueLugarPdf etiqueta="Recepción" lugar={evento.recepcion} estilos={estilos} />
+        {layout === 'itinerario' ? (
+          <View style={estilos.columna}>
+            {evento.misa ? (
+              <View style={estilos.bloqueColumna}>
+                <BloqueLugarPdf etiqueta="Misa" lugar={evento.misa} estilos={estilos} />
+              </View>
+            ) : null}
+            {evento.recepcion ? (
+              <View style={estilos.bloqueColumna}>
+                <BloqueLugarPdf etiqueta="Recepción" lugar={evento.recepcion} estilos={estilos} />
+              </View>
+            ) : null}
+          </View>
+        ) : (
+          <>
+            {evento.misa ? (
+              <BloqueLugarPdf etiqueta="Misa" lugar={evento.misa} estilos={estilos} />
+            ) : null}
+            {evento.recepcion ? (
+              <BloqueLugarPdf etiqueta="Recepción" lugar={evento.recepcion} estilos={estilos} />
+            ) : null}
+          </>
+        )}
+
+        {evento.vestimenta ? (
+          <Text
+            style={[
+              estilos.centrado,
+              estilos.sutil,
+              { marginTop: 18, fontFamily: 'SpaceMono', fontSize: 9 },
+            ]}
+          >
+            Vestimenta: {evento.vestimenta}
+          </Text>
         ) : null}
 
         {qrDataUrl ? (
@@ -544,6 +760,12 @@ export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
             <Image style={estilos.qrImagen} src={qrDataUrl} />
           </View>
         ) : null}
+
+        {layout === 'picado' && (
+          <View style={{ marginTop: 24, alignItems: 'center' }}>
+            <BannerPicadoPdf paleta={paleta} />
+          </View>
+        )}
       </Page>
     </Document>
   );
@@ -554,11 +776,15 @@ function Encabezado({
   estilos,
   quinceanera,
   foto,
+  fechaIso,
+  paleta,
 }: {
   templateId: TemplateId;
   estilos: Estilos;
   quinceanera: string;
   foto?: string;
+  fechaIso?: string;
+  paleta: Paleta;
 }) {
   const layout = layoutDe(templateId);
 
@@ -609,6 +835,74 @@ function Encabezado({
       <View>
         <Text style={estilos.eyebrow}>MIS XV AÑOS</Text>
         <Text style={[estilos.tituloScript, { fontSize: 46 }]}>{quinceanera}</Text>
+      </View>
+    );
+  }
+
+  if (layout === 'editorial') {
+    const partes = partesFecha(fechaIso);
+    return (
+      <View>
+        <Text style={estilos.diaEditorial}>{partes ? partes.dia : 'XV'}</Text>
+        {partes ? (
+          <Text style={[estilos.eyebrow, { textAlign: 'left', marginTop: 6 }]}>
+            {partes.mes} {partes.anio}
+          </Text>
+        ) : null}
+        <Text style={estilos.tituloDisplay}>{quinceanera}</Text>
+      </View>
+    );
+  }
+
+  if (layout === 'retrato') {
+    return (
+      <View>
+        {foto ? (
+          // eslint-disable-next-line jsx-a11y/alt-text
+          <Image style={estilos.fotoAncha} src={foto} />
+        ) : null}
+        <Text style={estilos.eyebrow}>MIS XV AÑOS</Text>
+        <Text style={estilos.tituloDisplay}>{quinceanera}</Text>
+      </View>
+    );
+  }
+
+  if (layout === 'itinerario') {
+    return (
+      <View>
+        <Text style={estilos.eyebrow}>EL DÍA DE</Text>
+        <Text style={estilos.tituloDisplay}>{quinceanera}</Text>
+      </View>
+    );
+  }
+
+  if (layout === 'corona') {
+    return (
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: paleta.oro,
+          borderTopLeftRadius: 120,
+          borderTopRightRadius: 120,
+          paddingTop: 28,
+          paddingHorizontal: 16,
+          paddingBottom: 12,
+        }}
+      >
+        <Text style={estilos.eyebrow}>MIS XV AÑOS</Text>
+        <Text style={estilos.tituloScript}>{quinceanera}</Text>
+      </View>
+    );
+  }
+
+  if (layout === 'vitela') {
+    return (
+      <View>
+        <Text style={estilos.eyebrow}>MIS XV AÑOS</Text>
+        <Text style={estilos.tituloScript}>{quinceanera}</Text>
+        <View style={{ alignItems: 'center', marginTop: 12 }}>
+          <SelloLacrePdf paleta={paleta} />
+        </View>
       </View>
     );
   }

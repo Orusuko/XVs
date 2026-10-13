@@ -54,7 +54,7 @@ export function ListaEventos({ eventosIniciales }: Props) {
             >
               <span className="font-display text-xl text-tinta">{evento.quinceanera_nombre}</span>
               <span className="mt-1 block font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">
-                {evento.estado}
+                {evento.estado === 'publicado' ? 'Publicado' : 'Borrador'}
               </span>
             </Link>
             <div className="flex shrink-0 items-center gap-4">
