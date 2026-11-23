@@ -37,7 +37,13 @@ export async function POST(request: Request) {
   const db = supabaseAdmin();
   const { error } = await db
     .from('families')
-    .update({ checked_in: false, checked_in_at: null, checked_in_by: null })
+    .update({
+      boletos_usados: 0,
+      checked_in: false,
+      checked_in_at: null,
+      checked_in_by: null,
+      qr_jti: null,
+    })
     .eq('id', familyId)
     .eq('event_id', eventId);
 

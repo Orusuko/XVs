@@ -1,5 +1,6 @@
 export type FamilyTicketRow = {
   boletos_total: number;
+  boletos_usados?: number;
   estado_confirmacion: string;
   checked_in: boolean;
 };
@@ -33,11 +34,11 @@ export function summarizeTickets(familias: FamilyTicketRow[]): TicketSummary {
 
     if (familia.estado_confirmacion === 'confirmado') {
       resumen.confirmados += boletos;
-      if (familia.checked_in) {
-        resumen.ingresados += boletos;
-      } else {
-        resumen.porIngresar += boletos;
-      }
+      const usados = familia.checked_in
+        ? boletos
+        : Math.min(boletos, Math.max(0, familia.boletos_usados ?? 0));
+      resumen.ingresados += usados;
+      resumen.porIngresar += boletos - usados;
     } else if (familia.estado_confirmacion === 'rechazado') {
       resumen.rechazados += boletos;
     } else {

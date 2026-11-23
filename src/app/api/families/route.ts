@@ -73,7 +73,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await actual.db
     .from('families')
-    .select('id, estado_confirmacion, checked_in')
+    .select('id, estado_confirmacion, checked_in, boletos_usados')
     .eq('event_id', eventId);
 
   if (error) {
@@ -163,6 +163,21 @@ export async function PATCH(request: Request) {
 
   if (!(await esFamiliaPropia(actual.db, actual.sesion.id, id))) {
     return NextResponse.json({ error: 'No encontramos esa familia.' }, { status: 404 });
+  }
+
+  if (typeof cambios.boletos_total === 'number') {
+    const { data: famActual } = await actual.db
+      .from('families')
+      .select('boletos_usados')
+      .eq('id', id)
+      .maybeSingle<{ boletos_usados: number }>();
+
+    if (famActual && cambios.boletos_total < famActual.boletos_usados) {
+      return NextResponse.json(
+        { error: `Ya entraron ${famActual.boletos_usados} boletos de esa familia.` },
+        { status: 409 },
+      );
+    }
   }
 
   const { error } = await actual.db.from('families').update(cambios).eq('id', id);

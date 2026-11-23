@@ -8,6 +8,7 @@ export type FamiliaStaff = {
   id: string;
   nombre_familia: string;
   boletos_total: number;
+  boletos_usados: number;
   estado_confirmacion: string;
   checked_in: boolean;
   checked_in_at: string | null;
@@ -51,6 +52,7 @@ export function useEstadoStaff(eventId: string) {
           id: familia.id,
           nombre_familia: familia.nombre_familia,
           boletos_total: familia.boletos_total,
+          boletos_usados: familia.boletos_usados ?? 0,
         })),
       );
     } catch {

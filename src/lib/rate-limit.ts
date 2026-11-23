@@ -15,6 +15,8 @@ export function resetRateLimitStore(): void {
   windows.clear();
 }
 
+// Variables requeridas en Vercel para rate limit distribuido entre instancias:
+// UPSTASH_REDIS_REST_URL y UPSTASH_REDIS_REST_TOKEN
 function upstashConfig(): { url: string; token: string } | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -42,13 +44,15 @@ async function upstashLimit(
   });
 
   if (!response.ok) {
-    // A limiter outage must not take the door down with it.
-    return { allowed: true, remaining: limit };
+    return inMemoryLimit(key, limit, windowMs);
   }
 
-  const [incr] = (await response.json()) as { result: number }[];
-  const count = incr?.result ?? 0;
+  const [incr] = (await response.json()) as { result?: unknown }[];
+  if (typeof incr?.result !== 'number') {
+    return inMemoryLimit(key, limit, windowMs);
+  }
 
+  const count = incr.result;
   return { allowed: count <= limit, remaining: Math.max(0, limit - count) };
 }
 
@@ -69,8 +73,8 @@ function inMemoryLimit(key: string, limit: number, windowMs: number): RateLimitR
 }
 
 /**
- * Uses Upstash when it is configured. The in-memory fallback is per serverless
- * instance, so it slows an attacker down rather than stopping them outright.
+ * Uses Upstash when UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set.
+ * Falls back to the per-instance in-memory store with the exact same cap.
  */
 export async function checkRateLimit(
   key: string,

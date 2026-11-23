@@ -73,9 +73,12 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
             id="staff-pin"
             required
             inputMode="numeric"
-            pattern="\d{4,8}"
+            pattern="\d{6,8}"
+            minLength={6}
+            maxLength={8}
+            title="Entre 6 y 8 dígitos"
             value={pin}
-            placeholder="PIN"
+            placeholder="PIN (6–8 dígitos)"
             onChange={(campo) => setPin(campo.target.value)}
             className="min-h-11 w-full rounded-[2px] border border-borde bg-papel-alto px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
           />

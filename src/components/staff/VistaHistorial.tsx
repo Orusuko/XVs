@@ -9,23 +9,29 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
   const { estado, error, refrescar } = useEstadoStaff(eventId);
   const [busqueda, setBusqueda] = useState('');
   const [trabajando, setTrabajando] = useState<string | null>(null);
+  const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [aviso, setAviso] = useState<string | null>(null);
 
   const coincidencias = useMemo(() => {
     if (!estado || busqueda.trim() === '') return [];
     const termino = busqueda.trim().toLowerCase();
+    const unicas = new Map<string, (typeof estado.pendientes)[number]>();
 
-    return [...estado.pendientes, ...estado.ingresados].filter((familia) =>
-      familia.nombre_familia.toLowerCase().includes(termino),
-    );
+    for (const familia of [...estado.pendientes, ...estado.ingresados]) {
+      if (!unicas.has(familia.id) && familia.nombre_familia.toLowerCase().includes(termino)) {
+        unicas.set(familia.id, familia);
+      }
+    }
+
+    return [...unicas.values()];
   }, [estado, busqueda]);
 
-  async function marcarEntrada(familyId: string) {
+  async function marcarEntrada(familyId: string, cantidad: number) {
     setTrabajando(familyId);
     const respuesta = await fetch('/api/checkin/manual', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, familyId }),
+      body: JSON.stringify({ eventId, familyId, cantidad }),
     });
     const datos = await respuesta.json().catch(() => null);
     setAviso(
@@ -104,37 +110,70 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
       )}
 
       <ul className="mt-4 divide-y divide-papel/10">
-        {coincidencias.map((familia) => (
-          <li key={familia.id} className="flex items-center justify-between gap-4 py-4">
-            <span>
-              <span className="block text-papel">{familia.nombre_familia}</span>
-              <span className="mt-1 block font-ticket text-xs text-papel/50">
-                {familia.boletos_total} {familia.boletos_total === 1 ? 'boleto' : 'boletos'}
-                {familia.checked_in_at && ` · entró ${formatearHora(familia.checked_in_at)}`}
-              </span>
-            </span>
+        {coincidencias.map((familia) => {
+          const usados = familia.boletos_usados ?? (familia.checked_in ? familia.boletos_total : 0);
+          const faltan = Math.max(0, familia.boletos_total - usados);
+          const seleccion = Math.min(faltan, Math.max(1, cantidades[familia.id] ?? faltan));
 
-            {familia.checked_in ? (
-              <button
-                type="button"
-                disabled={trabajando === familia.id}
-                onClick={() => revertir(familia.id)}
-                className="min-h-11 cursor-pointer px-3 text-sm text-oro-claro underline underline-offset-4 disabled:opacity-50"
-              >
-                Deshacer entrada
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={trabajando === familia.id}
-                onClick={() => marcarEntrada(familia.id)}
-                className="min-h-11 cursor-pointer rounded-[2px] bg-oro-claro px-4 text-sm font-medium text-tinta transition-colors duration-200 hover:bg-oro disabled:opacity-50"
-              >
-                Marcar entrada
-              </button>
-            )}
-          </li>
-        ))}
+          return (
+            <li key={familia.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+              <span>
+                <span className="block text-papel">{familia.nombre_familia}</span>
+                <span className="mt-1 block font-ticket text-xs text-papel/50">
+                  {usados > 0
+                    ? `${usados} de ${familia.boletos_total} boletos`
+                    : `${familia.boletos_total} ${familia.boletos_total === 1 ? 'boleto' : 'boletos'}`}
+                  {familia.checked_in_at && ` · entró ${formatearHora(familia.checked_in_at)}`}
+                </span>
+              </span>
+
+              <div className="flex items-center gap-2">
+                {faltan > 0 && (
+                  <>
+                    {faltan > 1 && (
+                      <select
+                        aria-label={`Cuántos boletos entran de ${familia.nombre_familia}`}
+                        value={seleccion}
+                        onChange={(e) =>
+                          setCantidades((prev) => ({
+                            ...prev,
+                            [familia.id]: Number(e.target.value),
+                          }))
+                        }
+                        className="min-h-11 rounded-[2px] border border-papel/25 bg-tinta px-2 font-ticket text-sm text-papel"
+                      >
+                        {Array.from({ length: faltan }, (_, idx) => idx + 1).map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      disabled={trabajando === familia.id}
+                      onClick={() => marcarEntrada(familia.id, seleccion)}
+                      className="min-h-11 cursor-pointer rounded-[2px] bg-oro-claro px-4 text-sm font-medium text-tinta transition-colors duration-200 hover:bg-oro disabled:opacity-50"
+                    >
+                      Marcar entrada
+                    </button>
+                  </>
+                )}
+
+                {usados > 0 && (
+                  <button
+                    type="button"
+                    disabled={trabajando === familia.id}
+                    onClick={() => revertir(familia.id)}
+                    className="min-h-11 cursor-pointer px-3 text-sm text-oro-claro underline underline-offset-4 disabled:opacity-50"
+                  >
+                    Deshacer entrada
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       <h2 className="mt-12 font-display text-xl text-papel">Últimas entradas</h2>

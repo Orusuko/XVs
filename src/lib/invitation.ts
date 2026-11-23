@@ -17,12 +17,18 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
 
   const { data: familia } = await db
     .from('families')
-    .select('id, event_id, nombre_familia, boletos_total, estado_confirmacion')
+    .select('id, event_id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in')
     .eq('token', token)
     .maybeSingle<
       Pick<
         FamilyRow,
-        'id' | 'event_id' | 'nombre_familia' | 'boletos_total' | 'estado_confirmacion'
+        | 'id'
+        | 'event_id'
+        | 'nombre_familia'
+        | 'boletos_total'
+        | 'boletos_usados'
+        | 'estado_confirmacion'
+        | 'checked_in'
       >
     >();
 
@@ -59,6 +65,7 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
       nombre: familia.nombre_familia,
       boletos: familia.boletos_total,
       estado: familia.estado_confirmacion,
+      yaEntro: familia.checked_in || (familia.boletos_usados ?? 0) > 0,
     },
     evento: {
       quinceanera: evento.quinceanera_nombre,

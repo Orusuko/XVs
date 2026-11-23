@@ -112,7 +112,13 @@ export function VistaConteo({ eventId }: { eventId: string }) {
                   </span>
                 )}
               </span>
-              <span className="font-ticket text-xl text-oro-claro">{familia.boletos_total}</span>
+              <span className="font-ticket text-xl text-oro-claro">
+                {pestana === 'ingresados'
+                  ? familia.boletos_usados < familia.boletos_total
+                    ? `${familia.boletos_usados}/${familia.boletos_total}`
+                    : familia.boletos_total
+                  : familia.boletos_total - familia.boletos_usados}
+              </span>
             </li>
           ))}
         </ul>

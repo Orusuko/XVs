@@ -13,6 +13,8 @@ type Respuesta = {
   resultado: ResultadoPreview;
   familia?: string;
   boletos?: number;
+  boletosUsados?: number;
+  boletosRestantes?: number;
   checkedInAt?: string | null;
   mensaje: string;
 };
@@ -48,6 +50,10 @@ export async function POST(request: Request) {
 
   const verificado = await verificarQr(qr, eventId);
 
+  if (verificado.resultado === 'error') {
+    return NextResponse.json({ error: verificado.mensaje }, { status: 500 });
+  }
+
   if (verificado.resultado === 'invalido' || verificado.resultado === 'jti_expirado') {
     await supabaseAdmin()
       .from('checkin_logs')
@@ -70,15 +76,25 @@ export async function POST(request: Request) {
       resultado: 'duplicado',
       familia: verificado.familia.nombre_familia,
       boletos: verificado.familia.boletos_total,
+      boletosUsados: verificado.familia.boletos_usados,
+      boletosRestantes: 0,
       checkedInAt: verificado.familia.checked_in_at,
       mensaje: verificado.mensaje,
     });
   }
 
+  const { boletos_total: total, boletos_usados: usados } = verificado.familia;
+  const restantes = Math.max(0, total - usados);
+
   return NextResponse.json<Respuesta>({
     resultado: 'listo',
     familia: verificado.familia.nombre_familia,
-    boletos: verificado.familia.boletos_total,
-    mensaje: 'Listo para registrar.',
+    boletos: total,
+    boletosUsados: usados,
+    boletosRestantes: restantes,
+    mensaje:
+      usados > 0
+        ? `Ya entraron ${usados} de ${total}. ¿Cuántos entran ahora?`
+        : '¿Cuántos entran ahora?',
   });
 }

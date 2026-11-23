@@ -38,6 +38,7 @@ export type FamilyRow = {
   event_id: string;
   nombre_familia: string;
   boletos_total: number;
+  boletos_usados: number;
   token: string;
   estado_confirmacion: EstadoConfirmacion;
   confirmado_at: string | null;
@@ -71,6 +72,7 @@ export type InvitationView = {
     nombre: string;
     boletos: number;
     estado: EstadoConfirmacion;
+    yaEntro?: boolean;
   };
   evento: {
     quinceanera: string;

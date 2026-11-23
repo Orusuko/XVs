@@ -7,7 +7,13 @@ import type { FamilyRow } from '@/lib/types';
 
 type Familia = Pick<
   FamilyRow,
-  'id' | 'nombre_familia' | 'boletos_total' | 'token' | 'estado_confirmacion' | 'checked_in'
+  | 'id'
+  | 'nombre_familia'
+  | 'boletos_total'
+  | 'boletos_usados'
+  | 'token'
+  | 'estado_confirmacion'
+  | 'checked_in'
 >;
 
 type Borrador = { nombre_familia: string; boletos_total: string };
@@ -55,7 +61,7 @@ export function TablaFamilias({
         const respuesta = await fetch(`/api/families?eventId=${encodeURIComponent(eventId)}`);
         if (!vivo || !respuesta.ok) return;
         const datos = (await respuesta.json()) as {
-          familias?: Pick<Familia, 'id' | 'estado_confirmacion' | 'checked_in'>[];
+          familias?: Pick<Familia, 'id' | 'estado_confirmacion' | 'checked_in' | 'boletos_usados'>[];
         };
         const lista = datos.familias ?? [];
         setFamilias((previas) =>
@@ -66,6 +72,7 @@ export function TablaFamilias({
               ...familia,
               estado_confirmacion: nueva.estado_confirmacion,
               checked_in: nueva.checked_in,
+              boletos_usados: nueva.boletos_usados,
             };
           }),
         );
@@ -89,6 +96,7 @@ export function TablaFamilias({
       summarizeTickets(
         familias.map((familia) => ({
           boletos_total: familia.boletos_total,
+          boletos_usados: familia.boletos_usados,
           estado_confirmacion: familia.estado_confirmacion,
           checked_in: familia.checked_in,
         })),
@@ -244,6 +252,7 @@ export function TablaFamilias({
         boletos_total:
           listas.find((lista) => lista.nombre_familia === familia.nombre_familia)?.boletos_total ??
           0,
+        boletos_usados: 0,
         estado_confirmacion: 'pendiente' as const,
         checked_in: false,
       })),

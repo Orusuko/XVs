@@ -21,8 +21,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 400 });
   }
 
-  if (!/^\d{4,8}$/.test(pin)) {
-    return NextResponse.json({ error: 'El PIN debe tener entre 4 y 8 dígitos.' }, { status: 400 });
+  if (!/^\d{6,8}$/.test(pin)) {
+    return NextResponse.json({ error: 'El PIN debe tener entre 6 y 8 dígitos.' }, { status: 400 });
   }
 
   const { data: evento } = await actual.db

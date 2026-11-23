@@ -11,11 +11,15 @@ import { mensajeFalloCamara } from '@/lib/staff/fallo-camara';
 const LECTOR_ID = 'lector-qr';
 
 type RespuestaCheckin = {
-  resultado: string;
+  resultado?: string;
+  error?: string;
   familia?: string;
   boletos?: number;
+  boletosTotal?: number;
+  boletosUsados?: number;
+  boletosRestantes?: number;
   checkedInAt?: string | null;
-  mensaje: string;
+  mensaje?: string;
 };
 
 export function VistaEscaner({ eventId }: { eventId: string }) {
@@ -55,25 +59,32 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         const datos: RespuestaCheckin = await respuesta.json();
 
         if (!respuesta.ok) {
-          setFicha({ tono: 'invalido', mensaje: (datos as { error?: string }).error ?? 'Intenta de nuevo.' });
+          setFicha({ tono: 'invalido', mensaje: datos.error ?? 'Intenta de nuevo.' });
           return;
         }
 
         if (datos.resultado === 'listo') {
-          setFicha({ tono: 'listo', familia: datos.familia, boletos: datos.boletos, mensaje: 'Confirma para dejarla pasar.' });
+          setFicha({
+            tono: 'listo',
+            familia: datos.familia,
+            boletos: datos.boletos,
+            boletosUsados: datos.boletosUsados,
+            boletosRestantes: datos.boletosRestantes,
+            mensaje: datos.mensaje ?? '¿Cuántos entran ahora?',
+          });
         } else if (datos.resultado === 'duplicado') {
           setFicha({
             tono: 'duplicado',
             familia: datos.familia,
             boletos: datos.boletos,
             checkedInAt: datos.checkedInAt,
-            mensaje: datos.mensaje,
+            mensaje: datos.mensaje ?? 'Este boleto ya fue registrado.',
           });
         } else {
           setFicha({
             tono: 'invalido',
             familia: datos.familia,
-            mensaje: datos.resultado === 'jti_expirado' ? datos.mensaje : datos.mensaje,
+            mensaje: datos.mensaje ?? 'Código no válido.',
           });
         }
       } catch {
@@ -81,19 +92,24 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         // queue the actual check-in for when the connection returns.
         const claims = peekQrClaims(qr);
         const familia = claims ? await buscarFamiliaLocal(claims.familyId) : undefined;
+        const restantes = familia
+          ? Math.max(1, familia.boletos_total - (familia.boletos_usados ?? 0))
+          : undefined;
 
         setFicha({
           tono: 'pendiente',
           familia: familia?.nombre_familia ?? 'Familia',
           boletos: familia?.boletos_total,
-          mensaje: 'Sin conexión. Se registrará cuando vuelva la señal.',
+          boletosUsados: familia?.boletos_usados ?? 0,
+          boletosRestantes: restantes,
+          mensaje: 'Sin conexión. Quedará pendiente de confirmar hasta que vuelva la señal.',
         });
       }
     },
     [eventId],
   );
 
-  async function adelante() {
+  async function adelante(cantidad: number) {
     const qr = qrActual.current;
     if (!qr || !ficha) return;
 
@@ -105,11 +121,18 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         eventId,
         qr,
         familia: familia?.nombre_familia ?? ficha.familia ?? 'Familia',
-        boletos: familia?.boletos_total ?? ficha.boletos ?? 0,
+        boletos: cantidad,
+        cantidad,
         registradoEn: new Date().toISOString(),
       });
 
-      setFicha({ ...ficha, tono: 'exitoso', mensaje: 'Guardado. Se registrará al volver la señal.' });
+      setFicha({
+        ...ficha,
+        tono: 'pendiente_envio',
+        boletos: cantidad,
+        boletosRestantes: cantidad,
+        mensaje: 'Guardado en este teléfono. Pendiente de confirmar al volver la señal.',
+      });
       setTimeout(cerrar, 1800);
       return;
     }
@@ -120,7 +143,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       const respuesta = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qr, eventId }),
+        body: JSON.stringify({ qr, eventId, cantidad }),
       });
 
       if (respuesta.status === 401) {
@@ -137,22 +160,31 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
           familia: datos.familia ?? ficha.familia,
           boletos: datos.boletos ?? ficha.boletos,
           checkedInAt: datos.checkedInAt,
-          mensaje: datos.mensaje ?? 'No se pudo registrar.',
+          mensaje: datos.mensaje ?? datos.error ?? 'No se pudo registrar.',
         });
         setConfirmando(false);
         return;
       }
 
+      const restantes = datos.boletosRestantes ?? 0;
       setFicha({
         tono: 'exitoso',
         familia: datos.familia,
         boletos: datos.boletos,
-        mensaje: 'Pueden pasar.',
+        boletosRestantes: datos.boletos,
+        mensaje:
+          restantes > 0
+            ? `Pueden pasar. Quedan ${restantes} ${restantes === 1 ? 'boleto' : 'boletos'} por entrar.`
+            : 'Pueden pasar.',
       });
       setConfirmando(false);
       setTimeout(cerrar, 1800);
     } catch {
-      setFicha({ ...ficha, tono: 'invalido', mensaje: 'Se perdió la conexión al confirmar. Intenta de nuevo.' });
+      setFicha({
+        ...ficha,
+        tono: 'invalido',
+        mensaje: 'Se perdió la conexión al confirmar. Intenta de nuevo.',
+      });
       setConfirmando(false);
     }
   }
@@ -239,6 +271,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
 
       {ficha && (
         <FichaEscaner
+          key={`${ficha.tono}-${ficha.familia ?? ''}-${ficha.boletosRestantes ?? ficha.boletos ?? 0}`}
           ficha={ficha}
           confirmando={confirmando}
           onAdelante={ficha.tono === 'listo' || ficha.tono === 'pendiente' ? adelante : null}

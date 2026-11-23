@@ -50,6 +50,7 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
       const datos = await respuesta.json();
 
       if (!respuesta.ok) {
+        setPreguntando(false);
         setError(datos.error ?? 'No pudimos guardar tu respuesta.');
         return;
       }
@@ -105,14 +106,14 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
           </Boton>
         )}
 
-        {estado !== 'pendiente' && (
+        {estado !== 'pendiente' && !familia.yaEntro && (
           <>
             <Boton variante="texto" className="mt-2" onClick={() => setPreguntando(true)}>
               Cambiar mi respuesta
             </Boton>
             {estado === 'confirmado' && (
               <p className="mt-2 text-xs text-tinta-suave">
-                Si confirmas otra vez se genera un pase nuevo y el anterior deja de servir.
+                Si cambias a «No podré ir», este pase deja de servir.
               </p>
             )}
           </>

@@ -29,13 +29,19 @@ export default async function InvitadosPage({
 
   const { data: familias } = await actual.db
     .from('families')
-    .select('id, nombre_familia, boletos_total, token, estado_confirmacion, checked_in')
+    .select('id, nombre_familia, boletos_total, boletos_usados, token, estado_confirmacion, checked_in')
     .eq('event_id', eventId)
     .order('nombre_familia')
     .returns<
       Pick<
         FamilyRow,
-        'id' | 'nombre_familia' | 'boletos_total' | 'token' | 'estado_confirmacion' | 'checked_in'
+        | 'id'
+        | 'nombre_familia'
+        | 'boletos_total'
+        | 'boletos_usados'
+        | 'token'
+        | 'estado_confirmacion'
+        | 'checked_in'
       >[]
     >();
 

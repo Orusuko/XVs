@@ -65,6 +65,25 @@ async function entrar(email: unknown, password: unknown) {
   return responderSesion(data.id, correo);
 }
 
+async function buscarIdAuthPorCorreo(correo: string): Promise<{ id: string | null; error: boolean }> {
+  const admin = supabaseAdmin().auth.admin;
+  const perPage = 1000;
+
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await admin.listUsers({ page, perPage });
+    if (error) {
+      console.error('auth.listUsers', error.message);
+      return { id: null, error: true };
+    }
+
+    const users = data?.users ?? [];
+    const encontrado = users.find((u) => u.email?.trim().toLowerCase() === correo);
+    if (encontrado) return { id: encontrado.id, error: false };
+
+    if (users.length < perPage) return { id: null, error: false };
+  }
+}
+
 async function crear(email: unknown, password: unknown) {
   const correo = correoDe(email);
   if (!correo) {
@@ -76,10 +95,19 @@ async function crear(email: unknown, password: unknown) {
     return NextResponse.json({ error: falloClave ?? MENSAJE_DEBIL }, { status: 400 });
   }
 
+  const existente = await buscarIdAuthPorCorreo(correo);
+  if (existente.error) {
+    return NextResponse.json({ error: 'No pudimos crear la cuenta. Inténtalo de nuevo.' }, { status: 500 });
+  }
+
   const passwordHash = await hashPin(password);
+  const fila: { id?: string; email: string; password_hash: string } = existente.id
+    ? { id: existente.id, email: correo, password_hash: passwordHash }
+    : { email: correo, password_hash: passwordHash };
+
   const { data, error } = await supabaseAdmin()
     .from('cuentas')
-    .insert({ email: correo, password_hash: passwordHash })
+    .insert(fila)
     .select('id')
     .single<{ id: string }>();
 

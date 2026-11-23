@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Boton } from '@/components/ui/Boton';
+import { cargarFotoParaPdf } from '@/lib/pdf/foto';
+import { CLAVE_FOTO_CONFIG, layoutDe } from '@/lib/templates/catalogo';
 import type { InvitationView } from '@/lib/types';
 
 type Props = {
@@ -23,16 +25,33 @@ export function DescargarPdf({ invitacion, qr }: Props) {
     setError(null);
 
     try {
-      const [{ pdf }, { InvitationPdf }, { registrarFuentes }, qrDataUrl] = await Promise.all([
-        import('@react-pdf/renderer'),
-        import('@/lib/pdf/InvitationPdf'),
-        import('@/lib/pdf/fuentes'),
-        qr ? renderQrDataUrl(qr) : Promise.resolve(undefined),
-      ]);
+      const layout = layoutDe(invitacion.evento.templateId);
+      const usaFoto = layout === 'mariposas' || layout === 'retrato';
+      const urlFoto = usaFoto ? invitacion.evento.templateConfig[CLAVE_FOTO_CONFIG] : undefined;
+
+      const [{ pdf }, { InvitationPdf }, { registrarFuentes }, qrDataUrl, fotoSrc] =
+        await Promise.all([
+          import('@react-pdf/renderer'),
+          import('@/lib/pdf/InvitationPdf'),
+          import('@/lib/pdf/fuentes'),
+          qr ? renderQrDataUrl(qr) : Promise.resolve(undefined),
+          usaFoto ? cargarFotoParaPdf(urlFoto) : Promise.resolve(null),
+        ]);
 
       registrarFuentes();
 
-      const blob = await pdf(<InvitationPdf invitacion={invitacion} qrDataUrl={qrDataUrl} />).toBlob();
+      let blob: Blob;
+      try {
+        blob = await pdf(
+          <InvitationPdf invitacion={invitacion} qrDataUrl={qrDataUrl} fotoSrc={fotoSrc} />,
+        ).toBlob();
+      } catch {
+        if (fotoSrc === null) throw new Error('pdf_failed');
+        blob = await pdf(
+          <InvitationPdf invitacion={invitacion} qrDataUrl={qrDataUrl} fotoSrc={null} />,
+        ).toBlob();
+      }
+
       const url = URL.createObjectURL(blob);
       const enlace = document.createElement('a');
       enlace.href = url;

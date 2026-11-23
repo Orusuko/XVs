@@ -13,6 +13,7 @@ export type EscaneoPendiente = {
   qr: string;
   familia: string;
   boletos: number;
+  cantidad?: number;
   registradoEn: string;
 };
 
@@ -20,6 +21,7 @@ export type FamiliaCache = {
   id: string;
   nombre_familia: string;
   boletos_total: number;
+  boletos_usados?: number;
 };
 
 let conexion: Promise<IDBPDatabase> | null = null;
@@ -88,7 +90,11 @@ export async function sincronizarPendientes(): Promise<{
       const respuesta = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qr: escaneo.qr, eventId: escaneo.eventId }),
+        body: JSON.stringify({
+          qr: escaneo.qr,
+          eventId: escaneo.eventId,
+          ...(escaneo.cantidad !== undefined ? { cantidad: escaneo.cantidad } : {}),
+        }),
       });
 
       const datos = (await respuesta.json().catch(() => ({}))) as { resultado?: string };

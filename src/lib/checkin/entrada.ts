@@ -1,8 +1,18 @@
-export function camposEntrada(nombre: string, origen: 'escaner' | 'manual') {
+export function camposEntrada(
+  nombre: string,
+  origen: 'escaner' | 'manual',
+  boletosUsadosActuales: number,
+  entran: number,
+  boletosTotal: number,
+) {
+  const nuevosUsados = boletosUsadosActuales + entran;
+  const completo = nuevosUsados >= boletosTotal;
+
   return {
-    checked_in: true as const,
+    boletos_usados: nuevosUsados,
+    checked_in: completo,
     checked_in_at: new Date().toISOString(),
     checked_in_by: origen === 'manual' ? `${nombre} (manual)` : nombre,
-    qr_jti: null,
+    ...(completo ? { qr_jti: null as null } : {}),
   };
 }

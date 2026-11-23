@@ -4,21 +4,27 @@ import type { FamilyRow } from '@/lib/types';
 
 export type FamiliaVerificada = Pick<
   FamilyRow,
-  'id' | 'nombre_familia' | 'boletos_total' | 'qr_jti' | 'checked_in' | 'checked_in_at'
+  | 'id'
+  | 'nombre_familia'
+  | 'boletos_total'
+  | 'boletos_usados'
+  | 'qr_jti'
+  | 'checked_in'
+  | 'checked_in_at'
 >;
 
 export type VerificacionQr =
+  | { resultado: 'error'; mensaje: string }
   | { resultado: 'invalido'; mensaje: string }
   | { resultado: 'jti_expirado'; mensaje: string; familia: FamiliaVerificada }
   | { resultado: 'ya_ingresado'; mensaje: string; familia: FamiliaVerificada }
-  | { resultado: 'listo'; familia: FamiliaVerificada };
+  | { resultado: 'listo'; familia: FamiliaVerificada; jti: string };
 
 /**
  * The three checks shared by preview and confirm: signature, event match,
- * family exists, and the `jti` is still the live one. Whether the ticket is
- * already checked in is read here for display, but the confirm route re-checks
- * it atomically — a stale read here must never be the thing that lets two
- * doors both win.
+ * family exists, and the `jti` is still the live one. Whether tickets remain
+ * is read here for display, and the confirm route re-checks and updates
+ * atomically — a stale read here must never let two doors count past total.
  */
 export async function verificarQr(qr: string, eventId: string): Promise<VerificacionQr> {
   const verificado = await verifyQrToken(qr);
@@ -27,17 +33,24 @@ export async function verificarQr(qr: string, eventId: string): Promise<Verifica
   }
 
   const db = supabaseAdmin();
-  const { data: familia } = await db
+  const { data: familia, error } = await db
     .from('families')
-    .select('id, nombre_familia, boletos_total, qr_jti, checked_in, checked_in_at')
+    .select('id, nombre_familia, boletos_total, boletos_usados, qr_jti, checked_in, checked_in_at')
     .eq('id', verificado.familyId)
     .maybeSingle<FamiliaVerificada>();
+
+  if (error) {
+    console.error('verificarQr.select', error.code, error.message);
+    return { resultado: 'error', mensaje: 'No pudimos consultar el boleto. Intenta de nuevo.' };
+  }
 
   if (!familia) {
     return { resultado: 'invalido', mensaje: 'Esta familia ya no está en la lista.' };
   }
 
-  if (familia.checked_in) {
+  const usados = familia.boletos_usados ?? 0;
+
+  if (familia.checked_in || usados >= familia.boletos_total) {
     return { resultado: 'ya_ingresado', familia, mensaje: 'Este boleto ya fue registrado.' };
   }
 
@@ -49,5 +62,5 @@ export async function verificarQr(qr: string, eventId: string): Promise<Verifica
     };
   }
 
-  return { resultado: 'listo', familia };
+  return { resultado: 'listo', familia: { ...familia, boletos_usados: usados }, jti: verificado.jti };
 }

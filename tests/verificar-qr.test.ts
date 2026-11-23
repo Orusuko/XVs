@@ -6,6 +6,7 @@ const familiaMock = {
   id: 'fam-1',
   nombre_familia: 'García',
   boletos_total: 4,
+  boletos_usados: 0,
   qr_jti: null as string | null,
   checked_in: false,
   checked_in_at: null as string | null,

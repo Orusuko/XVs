@@ -1,5 +1,6 @@
 import { Circle, Document, Image, Link, Page, Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import { formatearFecha, formatearHora, partesFecha } from '@/lib/format';
+import { normalizarFotoUrl } from '@/lib/pdf/foto';
 import { CLAVE_FOTO_CONFIG, layoutDe, type TemplateId } from '@/lib/templates/catalogo';
 import type { InvitationView, Lugar } from '@/lib/types';
 
@@ -603,14 +604,19 @@ type Props = {
   invitacion: InvitationView;
   /** Only present once the family has confirmed — that is what puts the pass on the page. */
   qrDataUrl?: string;
+  /** `null` forces omitting the photo (e.g., failed to load in the browser). */
+  fotoSrc?: string | null;
 };
 
-export function InvitationPdf({ invitacion, qrDataUrl }: Props) {
+export function InvitationPdf({ invitacion, qrDataUrl, fotoSrc }: Props) {
   const { evento, familia } = invitacion;
   const padres = [evento.padre, evento.madre].filter(Boolean).join(' y ');
   const paleta = PALETAS[evento.templateId];
   const estilos = crearEstilos(paleta);
-  const foto = evento.templateConfig[CLAVE_FOTO_CONFIG];
+  const foto =
+    fotoSrc === undefined
+      ? normalizarFotoUrl(evento.templateConfig[CLAVE_FOTO_CONFIG])
+      : (fotoSrc ?? undefined);
   const layout = layoutDe(evento.templateId);
 
   return (

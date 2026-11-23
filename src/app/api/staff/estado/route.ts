@@ -26,7 +26,9 @@ export async function GET(request: Request) {
   const [familiasRes, eventoRes] = await Promise.all([
     db
       .from('families')
-      .select('id, nombre_familia, boletos_total, estado_confirmacion, checked_in, checked_in_at, checked_in_by')
+      .select(
+        'id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in, checked_in_at, checked_in_by',
+      )
       .eq('event_id', eventId)
       .order('checked_in_at', { ascending: false, nullsFirst: false })
       .returns<
@@ -35,6 +37,7 @@ export async function GET(request: Request) {
           | 'id'
           | 'nombre_familia'
           | 'boletos_total'
+          | 'boletos_usados'
           | 'estado_confirmacion'
           | 'checked_in'
           | 'checked_in_at'
@@ -58,9 +61,12 @@ export async function GET(request: Request) {
         capacidadTotal: eventoRes.data?.capacidad_total ?? null,
       },
       resumen: summarizeTickets(familias),
-      ingresados: familias.filter((f) => f.checked_in),
+      ingresados: familias.filter((f) => f.boletos_usados > 0 || f.checked_in),
       pendientes: familias.filter(
-        (f) => f.estado_confirmacion === 'confirmado' && !f.checked_in,
+        (f) =>
+          f.estado_confirmacion === 'confirmado' &&
+          !f.checked_in &&
+          f.boletos_usados < f.boletos_total,
       ),
     },
     { headers: { 'Cache-Control': 'no-store' } },
