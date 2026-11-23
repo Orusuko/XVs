@@ -1,14 +1,11 @@
 import type { ReactNode } from 'react';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { NavegacionAdmin } from '@/components/admin/NavegacionAdmin';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const actual = await organizadorActual();
 
-  if (!user) return <>{children}</>;
+  if (!actual) return <>{children}</>;
 
   return (
     <>

@@ -109,6 +109,10 @@ describe('faltaEnvServicio', () => {
 
 describe('esErrorUsuarioExistente', () => {
   test('detecta códigos y mensajes de Auth', () => {
+    expect(esErrorUsuarioExistente({ code: '23505' })).toBe(true);
+    expect(esErrorUsuarioExistente({ message: 'duplicate key value violates unique constraint' })).toBe(
+      true,
+    );
     expect(esErrorUsuarioExistente({ code: 'email_exists' })).toBe(true);
     expect(esErrorUsuarioExistente({ code: 'user_already_exists' })).toBe(true);
     expect(esErrorUsuarioExistente({ message: 'User already registered' })).toBe(true);

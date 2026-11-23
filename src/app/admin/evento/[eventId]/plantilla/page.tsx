@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { SelectorPlantilla } from '@/components/admin/SelectorPlantilla';
 import { CLAVE_TEMPLATE_CONFIG, TEMPLATE_POR_DEFECTO, esTemplateId } from '@/lib/templates/catalogo';
 import type { EventRow } from '@/lib/types';
@@ -12,17 +12,14 @@ export default async function PlantillaPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const org = await organizadorActual();
+  if (!org) redirect('/admin');
 
-  if (!user) redirect('/admin');
-
-  const { data: evento } = await db
+  const { data: evento } = await org.db
     .from('events')
     .select('id, quinceanera_nombre, template_config')
     .eq('id', eventId)
+    .eq('admin_id', org.sesion.id)
     .maybeSingle<Pick<EventRow, 'id' | 'quinceanera_nombre' | 'template_config'>>();
 
   if (!evento) notFound();

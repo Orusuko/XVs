@@ -1,8 +1,9 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
-const AYUDA = `Crea o restablece el organizador en Supabase Auth (sin enviar correo).
+const AYUDA = `Crea o restablece la cuenta del organizador en la tabla cuentas (bcrypt, sin correo).
 
   node --env-file=.env scripts/crear-organizador.mjs --email tu@correo.com --password "tu-clave"
   node --env-file=.env.local scripts/crear-organizador.mjs --email tu@correo.com --password "tu-clave"
@@ -45,7 +46,7 @@ export function parseFlagsOrganizador(argv) {
 }
 
 export function resolveCredencialesOrganizador(flags, env) {
-  const email = (flags.email ?? env.ORGANIZER_EMAIL ?? '').trim();
+  const email = (flags.email ?? env.ORGANIZER_EMAIL ?? '').trim().toLowerCase();
   const password = flags.password ?? env.ORGANIZER_PASSWORD ?? '';
 
   if (!email || !password) {
@@ -58,6 +59,10 @@ export function resolveCredencialesOrganizador(flags, env) {
 
   if (password.length < 8) {
     return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres.' };
+  }
+
+  if (Buffer.byteLength(password) > 72) {
+    return { ok: false, error: 'La contraseña no puede pasar de 72 caracteres.' };
   }
 
   return { ok: true, email, password };
@@ -101,7 +106,7 @@ export function faltaEnvServicio(env) {
   if (url && key) return null;
   return (
     'Falta NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en .env o .env.local. ' +
-    'Agrégalas (Project Settings → API) y vuelve a correr el script. No uses «Crear cuenta» del formulario.'
+    'Agrégalas (Project Settings → API) y vuelve a correr el script.'
   );
 }
 
@@ -109,8 +114,10 @@ export function esErrorUsuarioExistente(error) {
   const code = (error?.code ?? '').toLowerCase();
   const message = (error?.message ?? '').toLowerCase();
   return (
+    code === '23505' ||
     code === 'email_exists' ||
     code === 'user_already_exists' ||
+    message.includes('duplicate key') ||
     message.includes('already registered') ||
     message.includes('already been registered')
   );
@@ -131,19 +138,6 @@ function cargarEnvLocal() {
     if (process.env[key] === undefined && val !== undefined) {
       process.env[key] = val;
     }
-  }
-}
-
-async function buscarUsuarioPorCorreo(admin, email) {
-  const needle = email.toLowerCase();
-  let page = 1;
-  for (;;) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) return { user: null, error };
-    const user = data.users.find((u) => (u.email ?? '').toLowerCase() === needle);
-    if (user) return { user, error: null };
-    if (data.users.length < 200) return { user: null, error: null };
-    page += 1;
   }
 }
 
@@ -177,48 +171,36 @@ async function main() {
     },
   );
 
-  const creado = await admin.auth.admin.createUser({
+  const passwordHash = await bcrypt.hash(cred.password, 10);
+  const creado = await admin.from('cuentas').insert({
     email: cred.email,
-    password: cred.password,
-    email_confirm: true,
+    password_hash: passwordHash,
   });
 
-  if (!creado.error && creado.data.user) {
-    console.log(
-      'Usuario creado y correo confirmado. Entra en /admin con ese correo y la contraseña que pasaste.',
-    );
+  if (!creado.error) {
+    console.log('Cuenta creada. Entra en /admin con ese correo y la contraseña que pasaste.');
     process.exit(0);
   }
 
   if (!esErrorUsuarioExistente(creado.error)) {
-    console.error('No se pudo crear el usuario.');
+    console.error('No se pudo crear la cuenta.');
     console.error(creado.error?.message ?? 'error desconocido');
     process.exit(1);
   }
 
-  const hallado = await buscarUsuarioPorCorreo(admin, cred.email);
-  if (hallado.error) {
-    console.error('El correo ya existe, pero no se pudo listar usuarios.');
-    console.error(hallado.error.message);
-    process.exit(1);
-  }
-  if (!hallado.user) {
-    console.error('El correo ya está registrado y no se encontró el id para actualizarlo.');
-    process.exit(1);
-  }
+  const actualizado = await admin
+    .from('cuentas')
+    .update({ password_hash: passwordHash })
+    .eq('email', cred.email)
+    .select('id');
 
-  const actualizado = await admin.auth.admin.updateUserById(hallado.user.id, {
-    password: cred.password,
-    email_confirm: true,
-  });
-
-  if (actualizado.error) {
-    console.error('No se pudo actualizar el usuario existente.');
-    console.error(actualizado.error.message);
+  if (actualizado.error || !actualizado.data?.length) {
+    console.error('No se pudo actualizar la cuenta existente.');
+    console.error(actualizado.error?.message ?? 'error desconocido');
     process.exit(1);
   }
 
-  console.log('Usuario ya existía: contraseña actualizada y correo confirmado. Entra en /admin.');
+  console.log('La cuenta ya existía: contraseña actualizada. Entra en /admin.');
   process.exit(0);
 }
 

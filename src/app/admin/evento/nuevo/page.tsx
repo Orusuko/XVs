@@ -1,16 +1,11 @@
 import { redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { FormularioEvento } from '@/components/admin/FormularioEvento';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NuevoEventoPage() {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) redirect('/admin');
+  if (!(await organizadorActual())) redirect('/admin');
 
   return (
     <main className="textura-papel min-h-screen px-5 py-14">

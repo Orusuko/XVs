@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/supabase/client';
 
 const PASOS = [
   { seg: 'datos', etiqueta: 'Datos' },
@@ -19,7 +18,8 @@ export function NavegacionAdmin() {
   const eventId = coincidencia?.[1] && coincidencia[1] !== 'nuevo' ? coincidencia[1] : null;
 
   async function salir() {
-    await supabaseBrowser().auth.signOut();
+    const respuesta = await fetch('/api/cuenta', { method: 'DELETE' });
+    if (!respuesta.ok) return;
     router.push('/admin');
     router.refresh();
   }

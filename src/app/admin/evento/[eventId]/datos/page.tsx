@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { FormularioEvento } from '@/components/admin/FormularioEvento';
 import type { EventRow } from '@/lib/types';
 
@@ -11,19 +11,16 @@ export default async function DatosEventoPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const actual = await organizadorActual();
+  if (!actual) redirect('/admin');
 
-  if (!user) redirect('/admin');
-
-  const { data: evento } = await db
+  const { data: evento } = await actual.db
     .from('events')
     .select(
       'id, quinceanera_nombre, padre, madre, padrinos, mensaje, misa, recepcion, capacidad_total, template_config',
     )
     .eq('id', eventId)
+    .eq('admin_id', actual.sesion.id)
     .maybeSingle<
       Pick<
         EventRow,

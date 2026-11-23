@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { layoutDe } from '@/lib/templates/catalogo';
 import { invitacionMuestra } from '@/lib/templates/muestra';
 import { POR_LAYOUT } from '@/lib/templates/por-layout';
@@ -9,19 +9,16 @@ export const dynamic = 'force-dynamic';
 
 export default async function VistaPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const actual = await organizadorActual();
+  if (!actual) redirect('/admin');
 
-  if (!user) redirect('/admin');
-
-  const { data: evento } = await db
+  const { data: evento } = await actual.db
     .from('events')
     .select(
       'quinceanera_nombre, padre, madre, padrinos, mensaje, misa, recepcion, template_config',
     )
     .eq('id', eventId)
+    .eq('admin_id', actual.sesion.id)
     .maybeSingle<
       Pick<
         EventRow,

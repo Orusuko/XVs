@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { TablaFamilias } from '@/components/admin/TablaFamilias';
 import { PanelStaff } from '@/components/admin/PanelStaff';
 import { siteUrl } from '@/lib/format';
@@ -13,24 +13,21 @@ export default async function InvitadosPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const actual = await organizadorActual();
+  if (!actual) redirect('/admin');
 
-  if (!user) redirect('/admin');
-
-  const { data: evento } = await db
+  const { data: evento } = await actual.db
     .from('events')
     .select('id, quinceanera_nombre, capacidad_total, estado')
     .eq('id', eventId)
+    .eq('admin_id', actual.sesion.id)
     .maybeSingle<
       Pick<EventRow, 'id' | 'quinceanera_nombre' | 'capacidad_total' | 'estado'>
     >();
 
   if (!evento) notFound();
 
-  const { data: familias } = await db
+  const { data: familias } = await actual.db
     .from('families')
     .select('id, nombre_familia, boletos_total, token, estado_confirmacion, checked_in')
     .eq('event_id', eventId)

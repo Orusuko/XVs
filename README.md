@@ -13,7 +13,7 @@ La especificación completa está en [`xv-anos-sistema-invitaciones.md`](./xv-an
 | Capa | Tecnología |
 |---|---|
 | Framework | Next.js 16 (App Router) |
-| Base de datos, auth y realtime | Supabase (Postgres) |
+| Base de datos | Supabase (Postgres) |
 | Firma de QR | `jose` (JWT HS256 con `jti` de un solo uso) |
 | PIN del personal | `bcryptjs` |
 | Escáner | `html5-qrcode` |
@@ -29,7 +29,7 @@ La especificación completa está en [`xv-anos-sistema-invitaciones.md`](./xv-an
 npm install
 ```
 
-2. Crea un proyecto en Supabase y ejecuta la migración `supabase/migrations/0001_initial_schema.sql` en el editor SQL.
+2. Crea un proyecto en Supabase y ejecuta, en orden, los SQL de `supabase/migrations/`.
 
 3. Copia `.env.example` a `.env.local` y llena los valores:
 
@@ -49,13 +49,11 @@ openssl rand -base64 48
 npm run dev
 ```
 
-## Auth del organizador (Supabase)
+## Acceso del organizador
 
-El panel (`/admin`) entra con **correo y contraseña**. No hace falta el correo mágico.
+El panel (`/admin`) entra con **correo y contraseña**. La cuenta vive en la tabla `cuentas` (bcrypt). No usa Supabase Auth ni correo mágico.
 
-### Crear el usuario (sin esperar email)
-
-En la raíz del repo, con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env` o `.env.local`:
+En `/admin` puedes **Crear cuenta** (mínimo 8 caracteres) o entrar. También, con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env` o `.env.local`:
 
 ```bash
 node --env-file=.env scripts/crear-organizador.mjs --email tu@correo.com --password "elige-una-clave-de-8+"
@@ -67,33 +65,9 @@ Si tus variables están en `.env.local`:
 node --env-file=.env.local scripts/crear-organizador.mjs --email tu@correo.com --password "elige-una-clave-de-8+"
 ```
 
-También vale exportar `ORGANIZER_EMAIL` y `ORGANIZER_PASSWORD` en la shell (no las subas al repo).
+También vale exportar `ORGANIZER_EMAIL` y `ORGANIZER_PASSWORD` en la shell (no las subas al repo). El script no imprime la contraseña. Si el correo ya existe, actualiza el hash. Luego abre `http://localhost:3000/admin`.
 
-El script llama `auth.admin.createUser` con `email_confirm: true`. No envía correo. Si el usuario ya existía (intentos de código u OTP), actualiza la contraseña y confirma el email. «Confirm email» puede seguir activo en el dashboard: igual podrás entrar.
-
-Luego abre `http://localhost:3000/admin` y entra con ese correo y contraseña.
-
-Si el script dice que falta `SUPABASE_SERVICE_ROLE_KEY`, cópiala de Project Settings → API a `.env` (nunca la commitees) y vuelve a correrlo. El formulario no puede crear el usuario cuando el correo está limitado.
-
-### Código por correo (opcional)
-
-En `/admin` hay un enlace «Usar código por correo». Esos ajustes **solo se hacen en el dashboard**; el repo no puede cambiarlos:
-
-1. **Authentication → URL Configuration → Site URL**  
-   En local: `http://localhost:3000`. En producción: la URL de Vercel (`https://….vercel.app` o el dominio propio). Si Site URL queda en localhost, los correos de producción redirigen a localhost.
-
-2. **Authentication → URL Configuration → Redirect URLs**  
-   `emailRedirectTo` se ignora si la URL no está en esta lista. Agrega **todas** estas (sin barra final de más):
-   - `http://localhost:3000/auth/callback`
-   - `http://localhost:3000/auth/callback?next=/admin`
-   - `https://TU-PROYECTO.vercel.app/auth/callback`
-   - `https://TU-PROYECTO.vercel.app/auth/callback?next=/admin`  
-   Si usas un dominio custom, también `https://tudominio.com/auth/callback` y la variante con `?next=/admin`.
-
-3. **Authentication → Email Templates → Magic Link**  
-   Pega la plantilla de [`docs/supabase-email-magic-link.md`](./docs/supabase-email-magic-link.md) para que el correo muestre `{{ .Token }}` (el código de 6 dígitos) y un enlace a `/auth/callback` con `token_hash` — no a la página «Sign In» de Supabase.
-
-Si usas el código: escríbelo en el formulario. No pulses «Sign In» en supabase.co. Gmail a menudo abre el enlace mágico al escanear el correo y lo deja en `otp_expired`. En `localhost`, el correo **debe** abrir `http://localhost:3000/auth/callback`; el fallo es la página alojada de Sign In, no localhost.
+La sesión es la cookie `xv_org` (httpOnly, SameSite=Lax, Secure en producción), firmada con `QR_SECRET`, 7 días. Las confirmaciones del panel se refrescan cada 5 segundos.
 
 ## Comandos
 
@@ -120,7 +94,8 @@ Si usas el código: escríbelo en el formulario. No pulses «Sign In» en supaba
 - El check-in usa una actualización condicionada (`checked_in = false`), de modo que dos puertas escaneando a la vez no pueden contar dos veces la misma familia.
 - Deshacer una entrada no revive el QR consumido: la familia debe abrir su invitación otra vez.
 - Los endpoints públicos tienen límite de peticiones por IP.
-- RLS está activo en todas las tablas y `checkin_logs` / `staff_users` no están expuestas al Data API.
+- RLS está activo. `cuentas`, `checkin_logs` y `staff_users` no están expuestas al cliente. Eventos y familias tampoco: el panel los lee en el servidor con el service role y filtra por el dueño.
+- La sesión del organizador es una cookie httpOnly firmada con `QR_SECRET`. El PIN de puerta sigue siendo otra cookie, `xv_staff`.
 
 ## Diferencias respecto a la especificación
 
@@ -128,6 +103,7 @@ Tres puntos se resolvieron distinto a lo escrito en el documento original, con l
 
 - **El escáner no verifica la firma del QR cuando está sin conexión.** Hacerlo exigiría poner el secreto HMAC en el teléfono, lo que permitiría fabricar pases falsos. Sin señal, el escaneo se guarda en IndexedDB y muestra el nombre de la familia desde una copia local de la lista; el servidor da el veredicto real al sincronizar.
 - **Las pantallas del personal consultan el servidor cada 5 segundos en vez de usar Realtime.** El personal entra con PIN, no con Supabase Auth, así que suscribirse a Realtime obligaría a exponer las tablas al rol anónimo.
+- **El panel del organizador también consulta las confirmaciones cada 5 segundos.** Sin JWT de Supabase, el canal de Realtime no puede filtrar por dueño. `families` sigue cerrada al rol anónimo.
 - **El límite de peticiones funciona en memoria si no configuras Upstash.** En ese caso el límite es por instancia, no global. Para el día del evento conviene configurar `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`.
 
 ## Pendiente (Fase 3 de la especificación)

@@ -1,20 +1,16 @@
 import Link from 'next/link';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 import { FormularioAcceso } from '@/components/admin/FormularioAcceso';
 import { ListaEventos } from '@/components/admin/ListaEventos';
-import { AvisoErrorAuth } from '@/components/auth/AvisoErrorAuth';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
 import type { EventRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
+  const actual = await organizadorActual();
 
-  if (!user) {
+  if (!actual) {
     return (
       <main className="textura-papel flex min-h-screen items-center justify-center px-5 py-16">
         <div className="w-full max-w-sm">
@@ -25,7 +21,6 @@ export default async function AdminPage() {
             Entra para preparar la invitación
           </h1>
           <div className="mt-8">
-            <AvisoErrorAuth />
             <FormularioAcceso />
           </div>
         </div>
@@ -33,9 +28,10 @@ export default async function AdminPage() {
     );
   }
 
-  const { data: eventos } = await db
+  const { data: eventos } = await actual.db
     .from('events')
     .select('id, quinceanera_nombre, estado, capacidad_total')
+    .eq('admin_id', actual.sesion.id)
     .order('created_at', { ascending: false })
     .returns<Pick<EventRow, 'id' | 'quinceanera_nombre' | 'estado' | 'capacidad_total'>[]>();
 

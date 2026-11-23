@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,15 +17,76 @@ function validar(fila: unknown): fila is NuevaFamilia {
   );
 }
 
-export async function POST(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
+async function exigirOrganizador() {
+  const actual = await organizadorActual();
+  if (!actual) {
+    return {
+      actual: null,
+      respuesta: NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 }),
+    };
   }
+  return { actual, respuesta: null };
+}
+
+async function esFamiliaPropia(
+  db: NonNullable<Awaited<ReturnType<typeof organizadorActual>>>['db'],
+  adminId: string,
+  familyId: string,
+) {
+  const { data: familia } = await db
+    .from('families')
+    .select('event_id')
+    .eq('id', familyId)
+    .maybeSingle<{ event_id: string }>();
+
+  if (!familia) return false;
+
+  const { data: evento } = await db
+    .from('events')
+    .select('id')
+    .eq('id', familia.event_id)
+    .eq('admin_id', adminId)
+    .maybeSingle();
+
+  return Boolean(evento);
+}
+
+export async function GET(request: Request) {
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
+
+  const eventId = new URL(request.url).searchParams.get('eventId');
+  if (!eventId) {
+    return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
+  }
+
+  const { data: evento } = await actual.db
+    .from('events')
+    .select('id')
+    .eq('id', eventId)
+    .eq('admin_id', actual.sesion.id)
+    .maybeSingle();
+
+  if (!evento) {
+    return NextResponse.json({ error: 'No encontramos ese evento.' }, { status: 404 });
+  }
+
+  const { data, error } = await actual.db
+    .from('families')
+    .select('id, estado_confirmacion, checked_in')
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('families.poll', error.message);
+    return NextResponse.json({ error: 'No pudimos leer las confirmaciones.' }, { status: 400 });
+  }
+
+  return NextResponse.json({ familias: data ?? [] });
+}
+
+export async function POST(request: Request) {
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const { eventId, familias } = (await request.json()) as {
     eventId?: string;
@@ -43,6 +104,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: evento } = await actual.db
+    .from('events')
+    .select('id')
+    .eq('id', eventId)
+    .eq('admin_id', actual.sesion.id)
+    .maybeSingle();
+
+  if (!evento) {
+    return NextResponse.json({ error: 'No encontramos ese evento.' }, { status: 404 });
+  }
+
   // 21 URL-safe characters: long enough that guessing a link is not worth trying.
   const filas = familias.map((familia) => ({
     event_id: eventId,
@@ -51,7 +123,10 @@ export async function POST(request: Request) {
     token: nanoid(21),
   }));
 
-  const { data, error } = await db.from('families').insert(filas).select('id, token, nombre_familia');
+  const { data, error } = await actual.db
+    .from('families')
+    .insert(filas)
+    .select('id, token, nombre_familia');
 
   if (error) {
     console.error('families.insert', error.message);
@@ -65,14 +140,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
-  }
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const { id, nombre_familia: nombre, boletos_total: boletos } = (await request.json()) as {
     id?: string;
@@ -92,7 +161,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Nada que actualizar.' }, { status: 400 });
   }
 
-  const { error } = await db.from('families').update(cambios).eq('id', id);
+  if (!(await esFamiliaPropia(actual.db, actual.sesion.id, id))) {
+    return NextResponse.json({ error: 'No encontramos esa familia.' }, { status: 404 });
+  }
+
+  const { error } = await actual.db.from('families').update(cambios).eq('id', id);
 
   if (error) {
     console.error('families.update', error.message);
@@ -106,21 +179,19 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
-  }
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const id = new URL(request.url).searchParams.get('id');
   if (!id) {
     return NextResponse.json({ error: 'Falta la familia.' }, { status: 400 });
   }
 
-  const { error } = await db.from('families').delete().eq('id', id);
+  if (!(await esFamiliaPropia(actual.db, actual.sesion.id, id))) {
+    return NextResponse.json({ error: 'No encontramos esa familia.' }, { status: 404 });
+  }
+
+  const { error } = await actual.db.from('families').delete().eq('id', id);
 
   if (error) {
     console.error('families.delete', error.message);

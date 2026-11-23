@@ -46,7 +46,7 @@ export function resolveCredencialesOrganizador(
   flags: FlagsOrganizador,
   env: Record<string, string | undefined>,
 ): ResultadoCredenciales {
-  const email = (flags.email ?? env.ORGANIZER_EMAIL ?? '').trim();
+  const email = (flags.email ?? env.ORGANIZER_EMAIL ?? '').trim().toLowerCase();
   const password = flags.password ?? env.ORGANIZER_PASSWORD ?? '';
 
   if (!email || !password) {
@@ -59,6 +59,10 @@ export function resolveCredencialesOrganizador(
 
   if (password.length < 8) {
     return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres.' };
+  }
+
+  if (Buffer.byteLength(password) > 72) {
+    return { ok: false, error: 'La contraseña no puede pasar de 72 caracteres.' };
   }
 
   return { ok: true, email, password };
@@ -105,7 +109,7 @@ export function faltaEnvServicio(env: Record<string, string | undefined>): strin
   if (url && key) return null;
   return (
     'Falta NEXT_PUBLIC_SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en .env o .env.local. ' +
-    'Agrégalas (Project Settings → API) y vuelve a correr el script. No uses «Crear cuenta» del formulario.'
+    'Agrégalas (Project Settings → API) y vuelve a correr el script.'
   );
 }
 
@@ -115,8 +119,10 @@ export function esErrorUsuarioExistente(
   const code = (error?.code ?? '').toLowerCase();
   const message = (error?.message ?? '').toLowerCase();
   return (
+    code === '23505' ||
     code === 'email_exists' ||
     code === 'user_already_exists' ||
+    message.includes('duplicate key') ||
     message.includes('already registered') ||
     message.includes('already been registered')
   );

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
+import { organizadorActual } from '@/lib/organizador';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,15 +25,20 @@ function soloCamposEditables(body: Record<string, unknown>) {
   return limpio;
 }
 
-export async function POST(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
+async function exigirOrganizador() {
+  const actual = await organizadorActual();
+  if (!actual) {
+    return {
+      actual: null,
+      respuesta: NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 }),
+    };
   }
+  return { actual, respuesta: null };
+}
+
+export async function POST(request: Request) {
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const body = (await request.json()) as Record<string, unknown>;
   const nombre = body.quinceanera_nombre;
@@ -42,9 +47,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Escribe el nombre de la quinceañera.' }, { status: 400 });
   }
 
-  const { data, error } = await db
+  const { data, error } = await actual.db
     .from('events')
-    .insert({ ...soloCamposEditables(body), admin_id: user.id })
+    .insert({ ...soloCamposEditables(body), admin_id: actual.sesion.id })
     .select('id')
     .single();
 
@@ -60,14 +65,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
-  }
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const body = (await request.json()) as Record<string, unknown>;
   const id = body.id;
@@ -76,8 +75,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
   }
 
-  // RLS keeps this scoped to the caller's own event.
-  const { error } = await db.from('events').update(soloCamposEditables(body)).eq('id', id);
+  const { data, error } = await actual.db
+    .from('events')
+    .update(soloCamposEditables(body))
+    .eq('id', id)
+    .eq('admin_id', actual.sesion.id)
+    .select('id');
 
   if (error) {
     console.error('events.update', error.message);
@@ -87,25 +90,28 @@ export async function PATCH(request: Request) {
     );
   }
 
+  if (!data?.length) {
+    return NextResponse.json({ error: 'No encontramos ese evento.' }, { status: 404 });
+  }
+
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(request: Request) {
-  const db = await supabaseServer();
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: 'Inicia sesión.' }, { status: 401 });
-  }
+  const { actual, respuesta } = await exigirOrganizador();
+  if (!actual) return respuesta;
 
   const id = new URL(request.url).searchParams.get('id');
   if (!id) {
     return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
   }
 
-  const { error } = await db.from('events').delete().eq('id', id);
+  const { data, error } = await actual.db
+    .from('events')
+    .delete()
+    .eq('id', id)
+    .eq('admin_id', actual.sesion.id)
+    .select('id');
 
   if (error) {
     console.error('events.delete', error.message);
@@ -113,6 +119,10 @@ export async function DELETE(request: Request) {
       { error: 'No pudimos eliminar el evento. Inténtalo de nuevo.' },
       { status: 400 },
     );
+  }
+
+  if (!data?.length) {
+    return NextResponse.json({ error: 'No encontramos ese evento.' }, { status: 404 });
   }
 
   return NextResponse.json({ ok: true });

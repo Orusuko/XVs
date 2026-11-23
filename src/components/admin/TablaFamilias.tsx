@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Boton } from '@/components/ui/Boton';
-import { supabaseBrowser } from '@/lib/supabase/client';
 import { summarizeTickets } from '@/lib/tickets';
 import type { FamilyRow } from '@/lib/types';
 
@@ -49,25 +48,39 @@ export function TablaFamilias({
   const publicado = estado === 'publicado';
 
   useEffect(() => {
-    const cliente = supabaseBrowser();
-    const canal = cliente
-      .channel(`familias-${eventId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'families', filter: `event_id=eq.${eventId}` },
-        (payload) => {
-          const actualizada = payload.new as Familia;
-          setFamilias((previas) =>
-            previas.map((familia) =>
-              familia.id === actualizada.id ? { ...familia, ...actualizada } : familia,
-            ),
-          );
-        },
-      )
-      .subscribe();
+    let vivo = true;
+
+    async function traer() {
+      try {
+        const respuesta = await fetch(`/api/families?eventId=${encodeURIComponent(eventId)}`);
+        if (!vivo || !respuesta.ok) return;
+        const datos = (await respuesta.json()) as {
+          familias?: Pick<Familia, 'id' | 'estado_confirmacion' | 'checked_in'>[];
+        };
+        const lista = datos.familias ?? [];
+        setFamilias((previas) =>
+          previas.map((familia) => {
+            const nueva = lista.find((item) => item.id === familia.id);
+            if (!nueva) return familia;
+            return {
+              ...familia,
+              estado_confirmacion: nueva.estado_confirmacion,
+              checked_in: nueva.checked_in,
+            };
+          }),
+        );
+      } catch {
+        // El siguiente ciclo reintenta. No abrir families al rol anónimo.
+      }
+    }
+
+    const reloj = setInterval(() => {
+      void traer();
+    }, 5000);
 
     return () => {
-      cliente.removeChannel(canal);
+      vivo = false;
+      clearInterval(reloj);
     };
   }, [eventId]);
 
