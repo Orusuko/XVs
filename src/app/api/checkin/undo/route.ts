@@ -7,9 +7,8 @@ import { readStaffSession } from '@/lib/staff-session';
 export const dynamic = 'force-dynamic';
 
 /**
- * Reverses a mistaken entry. `qr_jti` stays consumed on purpose: the QR that
- * was already scanned must not become usable again just because staff undid the
- * count. The family reopens their invitation to get a fresh one.
+ * Reverses the count. The printed QR stays valid: partial entry must not
+ * burn `qr_jti`, or the family cannot scan the rest of their tickets.
  */
 export async function POST(request: Request) {
   const limite = await checkRateLimit(`checkin-undo:${requestIp(request)}`, 30, 60_000);
@@ -42,7 +41,6 @@ export async function POST(request: Request) {
       checked_in: false,
       checked_in_at: null,
       checked_in_by: null,
-      qr_jti: null,
     })
     .eq('id', familyId)
     .eq('event_id', eventId);

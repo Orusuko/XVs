@@ -100,10 +100,13 @@ async function crear(email: unknown, password: unknown) {
     return NextResponse.json({ error: 'No pudimos crear la cuenta. Inténtalo de nuevo.' }, { status: 500 });
   }
 
+  // Adopting auth.users.id here would hand that person's events to whoever types the email.
+  if (existente.id) {
+    return NextResponse.json({ error: MENSAJE_YA_EXISTE }, { status: 409 });
+  }
+
   const passwordHash = await hashPin(password);
-  const fila: { id?: string; email: string; password_hash: string } = existente.id
-    ? { id: existente.id, email: correo, password_hash: passwordHash }
-    : { email: correo, password_hash: passwordHash };
+  const fila = { email: correo, password_hash: passwordHash };
 
   const { data, error } = await supabaseAdmin()
     .from('cuentas')

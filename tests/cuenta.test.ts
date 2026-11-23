@@ -36,7 +36,7 @@ describe('POST /api/cuenta', () => {
     listUsersMock.mockReset();
   });
 
-  test('si auth.users ya tiene ese correo, inserta la cuenta con ese mismo id', async () => {
+  test('si auth.users ya tiene ese correo, no crea la cuenta ni hereda sus eventos', async () => {
     listUsersMock.mockResolvedValue({
       data: { users: [{ id: 'old-auth-user-uuid', email: 'Organizador@Ejemplo.com' }] },
       error: null,
@@ -54,12 +54,8 @@ describe('POST /api/cuenta', () => {
       }),
     );
 
-    expect(res.status).toBe(200);
-    expect(insertMock).toHaveBeenCalledTimes(1);
-    expect(insertMock.mock.calls[0]![0]).toMatchObject({
-      id: 'old-auth-user-uuid',
-      email: 'organizador@ejemplo.com',
-    });
+    expect(res.status).toBe(409);
+    expect(insertMock).not.toHaveBeenCalled();
   });
 
   test('si el correo es nuevo, inserta sin id para generar uno nuevo', async () => {

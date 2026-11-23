@@ -109,7 +109,8 @@ export async function sincronizarPendientes(): Promise<{
         break;
       }
 
-      if (datos.resultado === 'duplicado') duplicados += 1;
+      if (respuesta.status !== 200) rechazados += 1;
+      else if (datos.resultado === 'duplicado') duplicados += 1;
       else if (datos.resultado === 'invalido' || datos.resultado === 'jti_expirado') {
         rechazados += 1;
       } else {

@@ -18,4 +18,10 @@ describe('decisionCola', () => {
     expect(decisionCola(429)).toBe('reintentar');
     expect(decisionCola(500)).toBe('reintentar');
   });
+
+  test('409 no se reintenta: si no, la cola se queda trabada', () => {
+    expect(decisionCola(409)).toBe('borrar');
+    expect(decisionCola(422)).toBe('borrar');
+    expect(decisionCola(400)).toBe('borrar');
+  });
 });

@@ -141,6 +141,18 @@ function cargarEnvLocal() {
   }
 }
 
+async function idDeAuth(admin, email) {
+  for (let page = 1; page <= 10; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) return null;
+    const users = data?.users ?? [];
+    const encontrado = users.find((usuario) => usuario.email?.trim().toLowerCase() === email);
+    if (encontrado) return encontrado.id;
+    if (users.length < 200) return null;
+  }
+  return null;
+}
+
 async function main() {
   const flags = parseFlagsOrganizador(process.argv.slice(2));
   if (flags.help) {
@@ -172,9 +184,11 @@ async function main() {
   );
 
   const passwordHash = await bcrypt.hash(cred.password, 10);
+  const idAuth = await idDeAuth(admin, cred.email);
   const creado = await admin.from('cuentas').insert({
     email: cred.email,
     password_hash: passwordHash,
+    ...(idAuth ? { id: idAuth } : {}),
   });
 
   if (!creado.error) {

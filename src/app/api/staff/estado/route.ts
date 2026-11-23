@@ -51,6 +51,11 @@ export async function GET(request: Request) {
       .maybeSingle<Pick<EventRow, 'capacidad_total' | 'quinceanera_nombre'>>(),
   ]);
 
+  if (familiasRes.error || eventoRes.error) {
+    console.error('staff.estado', familiasRes.error?.code ?? eventoRes.error?.code);
+    return NextResponse.json({ error: 'No pudimos leer el conteo.' }, { status: 500 });
+  }
+
   const familias = familiasRes.data ?? [];
 
   return NextResponse.json(

@@ -78,9 +78,11 @@ export function FichaEscaner({
 
       {ficha.boletos !== undefined && ficha.boletos > 0 && (
         <p className="mt-1 font-ticket text-4xl font-bold text-vino">
-          {ficha.tono === 'listo' && (ficha.boletosUsados ?? 0) > 0
-            ? `Faltan ${faltan} de ${ficha.boletos}`
-            : `Boletos: ${ficha.boletosRestantes ?? ficha.boletos}`}
+          {ficha.tono === 'exitoso' && (ficha.boletosRestantes ?? 0) > 0
+            ? `Quedan ${ficha.boletosRestantes}`
+            : ficha.tono === 'listo' && (ficha.boletosUsados ?? 0) > 0
+              ? `Faltan ${faltan} de ${ficha.boletos}`
+              : `Boletos: ${ficha.boletosRestantes ?? ficha.boletos}`}
         </p>
       )}
 

@@ -28,12 +28,14 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
   const [falloCamara, setFalloCamara] = useState<string | null>(null);
   const [sesionCaducada, setSesionCaducada] = useState(false);
   const procesando = useRef(false);
+  const enviando = useRef(false);
   const qrActual = useRef<string | null>(null);
 
   const cerrar = useCallback(() => {
     setFicha(null);
     setConfirmando(false);
     procesando.current = false;
+    enviando.current = false;
     qrActual.current = null;
   }, []);
 
@@ -111,7 +113,8 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
 
   async function adelante(cantidad: number) {
     const qr = qrActual.current;
-    if (!qr || !ficha) return;
+    if (!qr || !ficha || enviando.current) return;
+    enviando.current = true;
 
     if (ficha.tono === 'pendiente') {
       const claims = peekQrClaims(qr);
@@ -147,6 +150,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       });
 
       if (respuesta.status === 401) {
+        enviando.current = false;
         setSesionCaducada(true);
         setConfirmando(false);
         return;
@@ -155,6 +159,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       const datos: RespuestaCheckin = await respuesta.json();
 
       if (!respuesta.ok || datos.resultado !== 'exitoso') {
+        enviando.current = false;
         setFicha({
           tono: datos.resultado === 'duplicado' ? 'duplicado' : 'invalido',
           familia: datos.familia ?? ficha.familia,
@@ -171,7 +176,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
         tono: 'exitoso',
         familia: datos.familia,
         boletos: datos.boletos,
-        boletosRestantes: datos.boletos,
+        boletosRestantes: restantes,
         mensaje:
           restantes > 0
             ? `Pueden pasar. Quedan ${restantes} ${restantes === 1 ? 'boleto' : 'boletos'} por entrar.`
@@ -180,6 +185,7 @@ export function VistaEscaner({ eventId }: { eventId: string }) {
       setConfirmando(false);
       setTimeout(cerrar, 1800);
     } catch {
+      enviando.current = false;
       setFicha({
         ...ficha,
         tono: 'invalido',
