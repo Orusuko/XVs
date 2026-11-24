@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Solicitud inválida.' }, { status: 400 });
   }
 
-  if (typeof eventId !== 'string' || typeof pin !== 'string' || pin.length < 4) {
-    return NextResponse.json({ error: 'Escribe tu PIN de 4 dígitos.' }, { status: 400 });
+  if (typeof eventId !== 'string' || typeof pin !== 'string' || !/^\d{6,8}$/.test(pin)) {
+    return NextResponse.json({ error: 'El PIN debe tener entre 6 y 8 dígitos.' }, { status: 400 });
   }
 
   const db = supabaseAdmin();

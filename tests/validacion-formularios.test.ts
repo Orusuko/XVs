@@ -3,8 +3,12 @@ import {
   esFotoUrlValida,
   normalizarMapsUrl,
   validarCapacidad,
+  validarCamposEvento,
+  validarCapacidadApi,
   validarCorreo,
   validarPinStaff,
+  validarUrlOpcionalAbsoluta,
+  MAX_NOMBRE,
 } from '@/lib/validacion-formularios';
 
 describe('validacion-formularios', () => {
@@ -32,5 +36,24 @@ describe('validacion-formularios', () => {
   test('rechaza PIN débil 123456', () => {
     expect(validarPinStaff('123456')).toMatch(/difícil/i);
     expect(validarPinStaff('123')).toMatch(/6 y 8/);
+  });
+
+  test('valida evento en servidor: aforo, URLs y longitud', () => {
+    expect(validarCapacidadApi(-1)).toMatch(/entero/i);
+    expect(validarCapacidadApi(50)).toBeNull();
+    expect(validarUrlOpcionalAbsoluta('no-link', 'Maps')).toBeNull();
+    expect(validarUrlOpcionalAbsoluta('/ruta', 'Maps')).toMatch(/completo/i);
+    expect(validarUrlOpcionalAbsoluta('https://maps.example/x', 'Maps')).toBeNull();
+
+    const largo = 'a'.repeat(MAX_NOMBRE + 1);
+    expect(
+      validarCamposEvento({ quinceanera_nombre: largo }),
+    ).toMatch(new RegExp(`${MAX_NOMBRE}`));
+
+    expect(
+      validarCamposEvento({
+        misa: { maps_url: 'javascript:alert(1)' },
+      }),
+    ).toMatch(/http/i);
   });
 });

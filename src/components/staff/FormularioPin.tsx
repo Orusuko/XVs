@@ -33,18 +33,20 @@ export function FormularioPin({ eventId }: { eventId: string }) {
   }
 
   return (
-    <form onSubmit={entrar}>
+    <form onSubmit={entrar} noValidate>
       <label htmlFor="pin" className="sr-only">
-        PIN
+        PIN (6 a 8 dígitos)
       </label>
       <input
         id="pin"
-        required
         inputMode="numeric"
+        pattern="\d{6,8}"
+        minLength={6}
+        maxLength={8}
         autoComplete="one-time-code"
         value={pin}
-        onChange={(campo) => setPin(campo.target.value)}
-        placeholder="••••"
+        onChange={(campo) => setPin(campo.target.value.replace(/\D/g, '').slice(0, 8))}
+        placeholder="6–8 dígitos"
         className="min-h-14 w-full rounded-[2px] border border-papel/25 bg-transparent px-4 text-center font-ticket text-3xl tracking-[0.5em] text-papel outline-none transition-colors duration-200 focus:border-oro-claro"
       />
 
