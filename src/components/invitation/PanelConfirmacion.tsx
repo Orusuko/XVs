@@ -19,14 +19,13 @@ type Props = {
 export function PanelConfirmacion({ token, invitacion }: Props) {
   const { familia } = invitacion;
   const [estado, setEstado] = useState<EstadoConfirmacion>(familia.estado);
+  const [boletosPase, setBoletosPase] = useState(familia.boletos);
   const [qr, setQr] = useState<string | null>(null);
   const [reciénConfirmado, setReciénConfirmado] = useState(false);
   const [preguntando, setPreguntando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // A family that already said yes gets their existing pass back, without
-  // rotating the nonce, so an earlier download keeps working.
   useEffect(() => {
     if (familia.estado !== 'confirmado') return;
 
@@ -36,15 +35,20 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
       .catch(() => setError('No pudimos cargar tu pase. Revisa tu conexión.'));
   }, [familia.estado, token]);
 
-  async function responder(asistira: boolean) {
+  async function responder(asistira: boolean, boletosConfirmados?: number) {
     setEnviando(true);
     setError(null);
 
     try {
+      const cuerpo: { asistira: boolean; boletos_confirmados?: number } = { asistira };
+      if (asistira && boletosConfirmados !== undefined) {
+        cuerpo.boletos_confirmados = boletosConfirmados;
+      }
+
       const respuesta = await fetch(`/api/confirm/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ asistira }),
+        body: JSON.stringify(cuerpo),
       });
 
       const datos = await respuesta.json();
@@ -59,6 +63,7 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
       setPreguntando(false);
 
       if (datos.estado === 'confirmado') {
+        if (typeof datos.boletos === 'number') setBoletosPase(datos.boletos);
         setQr(datos.qr);
         setReciénConfirmado(true);
       } else {
@@ -78,14 +83,13 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
           <PaseCine
             qr={qr}
             familia={familia.nombre}
-            boletos={familia.boletos}
+            boletos={boletosPase}
             descargarAlAparecer={reciénConfirmado}
           />
         ) : (
           <p className="mt-10 text-center text-tinta-suave">Preparando tu pase…</p>
         ))}
 
-      {/* The PDF always reflects the same pass: no QR until estado is confirmado. */}
       <div className="mt-6 border-t border-borde pt-6">
         <DescargarPdf invitacion={invitacion} qr={estado === 'confirmado' ? qr ?? undefined : undefined} />
       </div>
@@ -129,6 +133,7 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
 
       {preguntando && (
         <Dialogo
+          totalBoletos={familia.boletos}
           enviando={enviando}
           onCerrar={() => setPreguntando(false)}
           onResponder={responder}
@@ -139,14 +144,19 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
 }
 
 function Dialogo({
+  totalBoletos,
   enviando,
   onCerrar,
   onResponder,
 }: {
+  totalBoletos: number;
   enviando: boolean;
   onCerrar: () => void;
-  onResponder: (asistira: boolean) => void;
+  onResponder: (asistira: boolean, boletosConfirmados?: number) => void;
 }) {
+  const [paso, setPaso] = useState<'pregunta' | 'cantidad'>('pregunta');
+  const [cantidad, setCantidad] = useState(totalBoletos);
+
   useEffect(() => {
     function alPresionar(evento: KeyboardEvent) {
       if (evento.key === 'Escape') onCerrar();
@@ -154,6 +164,18 @@ function Dialogo({
     window.addEventListener('keydown', alPresionar);
     return () => window.removeEventListener('keydown', alPresionar);
   }, [onCerrar]);
+
+  function confirmarSi() {
+    if (totalBoletos === 1) {
+      void onResponder(true, 1);
+      return;
+    }
+    setPaso('cantidad');
+  }
+
+  function enviarCantidad() {
+    void onResponder(true, cantidad);
+  }
 
   return (
     <div
@@ -163,30 +185,74 @@ function Dialogo({
       className="fixed inset-0 z-50 flex items-end justify-center bg-tinta/45 p-4 sm:items-center"
     >
       <div className="talon w-full max-w-sm px-6 pb-6 pt-9 text-center">
-        <h2 id="titulo-confirmacion" className="font-display text-2xl text-tinta">
-          ¿Asistirás?
-        </h2>
-        <p className="mt-2 text-sm text-tinta-suave">
-          Tu respuesta nos ayuda a reservar el lugar exacto en el salón.
-        </p>
+        {paso === 'pregunta' ? (
+          <>
+            <h2 id="titulo-confirmacion" className="font-display text-2xl text-tinta">
+              ¿Asistirás?
+            </h2>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Tu respuesta nos ayuda a reservar el lugar exacto en el salón.
+            </p>
 
-        <div className="mt-6 flex gap-3">
-          <Boton className="flex-1" disabled={enviando} onClick={() => onResponder(true)}>
-            Sí, ahí estaré
-          </Boton>
-          <Boton
-            variante="contorno"
-            className="flex-1"
-            disabled={enviando}
-            onClick={() => onResponder(false)}
-          >
-            No podré ir
-          </Boton>
-        </div>
+            <div className="mt-6 flex gap-3">
+              <Boton className="flex-1" disabled={enviando} onClick={confirmarSi}>
+                Sí, ahí estaré
+              </Boton>
+              <Boton
+                variante="contorno"
+                className="flex-1"
+                disabled={enviando}
+                onClick={() => onResponder(false)}
+              >
+                No podré ir
+              </Boton>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 id="titulo-confirmacion" className="font-display text-2xl text-tinta">
+              ¿Cuántos asisten?
+            </h2>
+            <p className="mt-2 text-sm text-tinta-suave">
+              Tienen hasta {totalBoletos} boletos en esta invitación.
+            </p>
 
-        <Boton variante="texto" className="mt-3 w-full" disabled={enviando} onClick={onCerrar}>
-          Ahora no
-        </Boton>
+            <label className="mt-6 block text-left text-sm text-tinta-suave" htmlFor="cantidad-boletos">
+              Personas que confirman
+            </label>
+            <select
+              id="cantidad-boletos"
+              className="mt-2 w-full rounded-lg border border-borde bg-fondo px-3 py-2 text-tinta"
+              value={cantidad}
+              disabled={enviando}
+              onChange={(e) => setCantidad(Number(e.target.value))}
+            >
+              {Array.from({ length: totalBoletos }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n} {n === 1 ? 'persona' : 'personas'}
+                </option>
+              ))}
+            </select>
+
+            <Boton className="mt-6 w-full" disabled={enviando} onClick={enviarCantidad}>
+              Confirmar
+            </Boton>
+            <Boton
+              variante="texto"
+              className="mt-3 w-full"
+              disabled={enviando}
+              onClick={() => setPaso('pregunta')}
+            >
+              Volver
+            </Boton>
+          </>
+        )}
+
+        {paso === 'pregunta' && (
+          <Boton variante="texto" className="mt-3 w-full" disabled={enviando} onClick={onCerrar}>
+            Ahora no
+          </Boton>
+        )}
       </div>
     </div>
   );

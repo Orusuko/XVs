@@ -13,6 +13,7 @@ type Familia = Pick<
   | 'id'
   | 'nombre_familia'
   | 'boletos_total'
+  | 'boletos_confirmados'
   | 'boletos_usados'
   | 'token'
   | 'estado_confirmacion'
@@ -112,6 +113,7 @@ export function TablaFamilias({
       summarizeTickets(
         familias.map((familia) => ({
           boletos_total: familia.boletos_total,
+          boletos_confirmados: familia.boletos_confirmados,
           boletos_usados: familia.boletos_usados,
           estado_confirmacion: familia.estado_confirmacion,
           checked_in: familia.checked_in,

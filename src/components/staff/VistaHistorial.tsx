@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
@@ -132,8 +133,9 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
 
       <ul className="mt-4 divide-y divide-papel/10">
         {coincidencias.map((familia) => {
-          const usados = familia.boletos_usados ?? (familia.checked_in ? familia.boletos_total : 0);
-          const faltan = Math.max(0, familia.boletos_total - usados);
+          const tope = limiteBoletosFamilia(familia);
+          const usados = familia.boletos_usados ?? (familia.checked_in ? tope : 0);
+          const faltan = Math.max(0, tope - usados);
           const seleccion = Math.min(faltan, Math.max(1, cantidades[familia.id] ?? faltan));
 
           return (
@@ -142,8 +144,8 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
                 <span className="block text-papel">{familia.nombre_familia}</span>
                 <span className="mt-1 block font-ticket text-xs text-papel/50">
                   {usados > 0
-                    ? `${usados} de ${familia.boletos_total} boletos`
-                    : `${familia.boletos_total} ${familia.boletos_total === 1 ? 'boleto' : 'boletos'}`}
+                    ? `${usados} de ${tope} boletos`
+                    : `${tope} ${tope === 1 ? 'boleto' : 'boletos'}`}
                   {familia.checked_in_at && ` · entró ${formatearHora(familia.checked_in_at)}`}
                 </span>
               </span>

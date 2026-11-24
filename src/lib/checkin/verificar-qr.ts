@@ -1,12 +1,19 @@
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { verifyQrToken } from '@/lib/qr/verify';
 import type { FamilyRow } from '@/lib/types';
+
+const SELECT_CON_CONFIRMADOS =
+  'id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, qr_jti, checked_in, checked_in_at';
+const SELECT_SIN_CONFIRMADOS =
+  'id, nombre_familia, boletos_total, boletos_usados, qr_jti, checked_in, checked_in_at';
 
 export type FamiliaVerificada = Pick<
   FamilyRow,
   | 'id'
   | 'nombre_familia'
   | 'boletos_total'
+  | 'boletos_confirmados'
   | 'boletos_usados'
   | 'qr_jti'
   | 'checked_in'
@@ -33,11 +40,19 @@ export async function verificarQr(qr: string, eventId: string): Promise<Verifica
   }
 
   const db = supabaseAdmin();
-  const { data: familia, error } = await db
+  let { data: familia, error } = await db
     .from('families')
-    .select('id, nombre_familia, boletos_total, boletos_usados, qr_jti, checked_in, checked_in_at')
+    .select(SELECT_CON_CONFIRMADOS)
     .eq('id', verificado.familyId)
     .maybeSingle<FamiliaVerificada>();
+
+  if (error?.code === '42703' && error.message?.includes('boletos_confirmados')) {
+    ({ data: familia, error } = await db
+      .from('families')
+      .select(SELECT_SIN_CONFIRMADOS)
+      .eq('id', verificado.familyId)
+      .maybeSingle<FamiliaVerificada>());
+  }
 
   if (error) {
     console.error('verificarQr.select', error.code, error.message);
@@ -49,8 +64,9 @@ export async function verificarQr(qr: string, eventId: string): Promise<Verifica
   }
 
   const usados = familia.boletos_usados ?? 0;
+  const tope = limiteBoletosFamilia(familia);
 
-  if (familia.checked_in || usados >= familia.boletos_total) {
+  if (familia.checked_in || usados >= tope) {
     return { resultado: 'ya_ingresado', familia, mensaje: 'Este boleto ya fue registrado.' };
   }
 

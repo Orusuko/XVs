@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
 import { EstadoCargaStaff } from '@/components/staff/EstadoCargaStaff';
@@ -142,11 +143,15 @@ function ContenidoConteo({
                 )}
               </span>
               <span className="font-ticket text-xl text-oro-claro">
-                {pestana === 'ingresados'
-                  ? familia.boletos_usados < familia.boletos_total
-                    ? `${familia.boletos_usados}/${familia.boletos_total}`
-                    : familia.boletos_total
-                  : familia.boletos_total - familia.boletos_usados}
+                {(() => {
+                  const tope = limiteBoletosFamilia(familia);
+                  const usados = familia.boletos_usados ?? 0;
+                  return pestana === 'ingresados'
+                    ? usados < tope
+                      ? `${usados}/${tope}`
+                      : tope
+                    : tope - usados;
+                })()}
               </span>
             </li>
           ))}

@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { camposEntrada } from '@/lib/checkin/entrada';
 import { verificarQr } from '@/lib/checkin/verificar-qr';
+import { bloqueoCheckinSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { readStaffSession } from '@/lib/staff-session';
 import type { CheckinResultado, FamilyRow } from '@/lib/types';
 
@@ -22,7 +24,14 @@ type Respuesta = {
 
 type FamiliaActual = Pick<
   FamilyRow,
-  'id' | 'nombre_familia' | 'boletos_total' | 'boletos_usados' | 'qr_jti' | 'checked_in' | 'checked_in_at'
+  | 'id'
+  | 'nombre_familia'
+  | 'boletos_total'
+  | 'boletos_confirmados'
+  | 'boletos_usados'
+  | 'qr_jti'
+  | 'checked_in'
+  | 'checked_in_at'
 >;
 
 async function registrar(
@@ -67,6 +76,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Inicia sesión con tu PIN.' }, { status: 401 });
   }
 
+  const dbCheck = supabaseAdmin();
+  const bloqueo = await bloqueoCheckinSiEventoNoPublico(dbCheck, eventId);
+  if (bloqueo) {
+    return NextResponse.json({ error: bloqueo.error }, { status: bloqueo.status });
+  }
+
   const verificado = await verificarQr(qr, eventId);
 
   if (verificado.resultado === 'error') {
@@ -100,10 +115,12 @@ export async function POST(request: Request) {
   const db = supabaseAdmin();
   const jti = verificado.jti;
   let actual = verificado.familia;
-  let entran = typeof cantidad === 'number' ? cantidad : actual.boletos_total - actual.boletos_usados;
+  const topeActual = limiteBoletosFamilia(actual);
+  let entran = typeof cantidad === 'number' ? cantidad : topeActual - actual.boletos_usados;
 
   for (let intento = 0; intento < 2; intento += 1) {
-    const restantes = actual.boletos_total - actual.boletos_usados;
+    const tope = limiteBoletosFamilia(actual);
+    const restantes = tope - actual.boletos_usados;
     if (restantes <= 0) {
       await registrar(eventId, actual.id, sesion.nombre, 'duplicado');
       return NextResponse.json<Respuesta>({
@@ -130,12 +147,12 @@ export async function POST(request: Request) {
 
     const { data: actualizadas, error: updateError } = await db
       .from('families')
-      .update(camposEntrada(sesion.nombre, 'escaner', actual.boletos_usados, entran, actual.boletos_total))
+      .update(camposEntrada(sesion.nombre, 'escaner', actual.boletos_usados, entran, tope))
       .eq('id', actual.id)
       .eq('qr_jti', jti)
       .eq('checked_in', false)
       .eq('boletos_usados', actual.boletos_usados)
-      .lte('boletos_usados', actual.boletos_total - entran)
+      .lte('boletos_usados', tope - entran)
       .select('id, nombre_familia, boletos_total, boletos_usados, checked_in, checked_in_at');
 
     if (updateError) {
@@ -156,7 +173,11 @@ export async function POST(request: Request) {
         boletos: entran,
         boletosTotal: registrada.boletos_total,
         boletosUsados: usadosDespues,
-        boletosRestantes: Math.max(0, registrada.boletos_total - usadosDespues),
+        boletosRestantes: Math.max(
+          0,
+          limiteBoletosFamilia({ ...registrada, boletos_confirmados: actual.boletos_confirmados }) -
+            usadosDespues,
+        ),
         checkedInAt: registrada.checked_in_at,
         mensaje: 'Acceso registrado.',
       });
@@ -164,7 +185,9 @@ export async function POST(request: Request) {
 
     const { data: relectura, error: readError } = await db
       .from('families')
-      .select('id, nombre_familia, boletos_total, boletos_usados, qr_jti, checked_in, checked_in_at')
+      .select(
+        'id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, qr_jti, checked_in, checked_in_at',
+      )
       .eq('id', actual.id)
       .maybeSingle<FamiliaActual>();
 
@@ -209,7 +232,7 @@ export async function POST(request: Request) {
 
     actual = relectura;
     if (typeof cantidad !== 'number') {
-      entran = actual.boletos_total - actual.boletos_usados;
+      entran = limiteBoletosFamilia(actual) - actual.boletos_usados;
     }
   }
 

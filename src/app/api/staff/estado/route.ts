@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { readStaffSession } from '@/lib/staff-session';
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
+import { consultarFamiliasEvento } from '@/lib/supabase/families-query';
 import { summarizeTickets } from '@/lib/tickets';
 import type { EventRow, FamilyRow } from '@/lib/types';
+
+const CAMPOS_CON =
+  'id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, estado_confirmacion, checked_in, checked_in_at, checked_in_by';
+const CAMPOS_SIN =
+  'id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in, checked_in_at, checked_in_by';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,26 +31,9 @@ export async function GET(request: Request) {
   const db = supabaseAdmin();
 
   const [familiasRes, eventoRes] = await Promise.all([
-    db
-      .from('families')
-      .select(
-        'id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in, checked_in_at, checked_in_by',
-      )
-      .eq('event_id', eventId)
-      .order('checked_in_at', { ascending: false, nullsFirst: false })
-      .returns<
-        Pick<
-          FamilyRow,
-          | 'id'
-          | 'nombre_familia'
-          | 'boletos_total'
-          | 'boletos_usados'
-          | 'estado_confirmacion'
-          | 'checked_in'
-          | 'checked_in_at'
-          | 'checked_in_by'
-        >[]
-      >(),
+    consultarFamiliasEvento(db, eventId, CAMPOS_CON, CAMPOS_SIN, {
+      orden: { columna: 'checked_in_at', ascendente: false, nullsFirst: false },
+    }),
     db
       .from('events')
       .select('capacidad_total, quinceanera_nombre')
@@ -56,7 +46,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'No pudimos leer el conteo.' }, { status: 500 });
   }
 
-  const familias = familiasRes.data ?? [];
+  const familias = (familiasRes.data ?? []) as unknown as Pick<
+    FamilyRow,
+    | 'id'
+    | 'nombre_familia'
+    | 'boletos_total'
+    | 'boletos_confirmados'
+    | 'boletos_usados'
+    | 'estado_confirmacion'
+    | 'checked_in'
+    | 'checked_in_at'
+    | 'checked_in_by'
+  >[];
 
   return NextResponse.json(
     {
@@ -67,12 +68,11 @@ export async function GET(request: Request) {
       },
       resumen: summarizeTickets(familias),
       ingresados: familias.filter((f) => f.boletos_usados > 0 || f.checked_in),
-      pendientes: familias.filter(
-        (f) =>
-          f.estado_confirmacion === 'confirmado' &&
-          !f.checked_in &&
-          f.boletos_usados < f.boletos_total,
-      ),
+      pendientes: familias.filter((f) => {
+        if (f.estado_confirmacion !== 'confirmado' || f.checked_in) return false;
+        const tope = limiteBoletosFamilia(f as FamilyRow);
+        return (f.boletos_usados ?? 0) < tope;
+      }),
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );
