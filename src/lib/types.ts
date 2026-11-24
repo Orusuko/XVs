@@ -38,6 +38,7 @@ export type FamilyRow = {
   event_id: string;
   nombre_familia: string;
   boletos_total: number;
+  boletos_confirmados?: number | null;
   boletos_usados: number;
   token: string;
   estado_confirmacion: EstadoConfirmacion;

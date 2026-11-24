@@ -26,6 +26,15 @@ vi.mock('@/lib/staff-session', () => ({
 vi.mock('@/lib/supabase/admin', () => ({
   supabaseAdmin: () => ({
     from: (tabla: string) => {
+      if (tabla === 'events') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { estado: 'publicado' }, error: null }),
+            }),
+          }),
+        };
+      }
       if (tabla === 'checkin_logs') {
         return { insert: async () => ({ error: null }) };
       }
@@ -174,6 +183,22 @@ describe('Check-in por boletos y errores 500', () => {
     );
 
     expect(res.status).toBe(500);
+  });
+
+  test('no permite entrar más que boletos_confirmados', async () => {
+    estadoDb.familia.boletos_total = 5;
+    (estadoDb.familia as { boletos_confirmados?: number }).boletos_confirmados = 2;
+    const qr = await signQrToken({ familyId: 'fam-1', eventId: 'ev-1', jti: 'jti-1' });
+
+    const res = await checkinPost(
+      new Request('http://localhost/api/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '10.0.2.6' },
+        body: JSON.stringify({ qr, eventId: 'ev-1', cantidad: 3 }),
+      }),
+    );
+
+    expect(res.status).toBe(409);
   });
 
   test('no permite contar más de los boletos que faltan', async () => {

@@ -1,5 +1,8 @@
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
+
 export type FamilyTicketRow = {
   boletos_total: number;
+  boletos_confirmados?: number | null;
   boletos_usados?: number;
   estado_confirmacion: string;
   checked_in: boolean;
@@ -29,20 +32,20 @@ export function summarizeTickets(familias: FamilyTicketRow[]): TicketSummary {
   };
 
   for (const familia of familias) {
-    const boletos = familia.boletos_total;
-    resumen.total += boletos;
+    const cupo = limiteBoletosFamilia(familia);
+    resumen.total += familia.boletos_total;
 
     if (familia.estado_confirmacion === 'confirmado') {
-      resumen.confirmados += boletos;
+      resumen.confirmados += cupo;
       const usados = familia.checked_in
-        ? boletos
-        : Math.min(boletos, Math.max(0, familia.boletos_usados ?? 0));
+        ? cupo
+        : Math.min(cupo, Math.max(0, familia.boletos_usados ?? 0));
       resumen.ingresados += usados;
-      resumen.porIngresar += boletos - usados;
+      resumen.porIngresar += cupo - usados;
     } else if (familia.estado_confirmacion === 'rechazado') {
-      resumen.rechazados += boletos;
+      resumen.rechazados += familia.boletos_total;
     } else {
-      resumen.pendientes += boletos;
+      resumen.pendientes += familia.boletos_total;
     }
   }
 

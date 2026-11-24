@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import { consultarFamiliasEvento } from '@/lib/supabase/families-query';
 import { organizadorActual } from '@/lib/organizador';
 import { TablaFamilias } from '@/components/admin/TablaFamilias';
 import { PanelStaff } from '@/components/admin/PanelStaff';
@@ -27,23 +28,18 @@ export default async function InvitadosPage({
 
   if (!evento) notFound();
 
-  const { data: familias, error: errFamilias } = await actual.db
-    .from('families')
-    .select('id, nombre_familia, boletos_total, boletos_usados, token, estado_confirmacion, checked_in')
-    .eq('event_id', eventId)
-    .order('nombre_familia')
-    .returns<
-      Pick<
-        FamilyRow,
-        | 'id'
-        | 'nombre_familia'
-        | 'boletos_total'
-        | 'boletos_usados'
-        | 'token'
-        | 'estado_confirmacion'
-        | 'checked_in'
-      >[]
-    >();
+  const camposCon =
+    'id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, token, estado_confirmacion, checked_in';
+  const camposSin =
+    'id, nombre_familia, boletos_total, boletos_usados, token, estado_confirmacion, checked_in';
+
+  const { data: familias, error: errFamilias } = await consultarFamiliasEvento(
+    actual.db,
+    eventId,
+    camposCon,
+    camposSin,
+    { orden: { columna: 'nombre_familia' } },
+  );
 
   const errorLista =
     errFamilias &&
@@ -70,7 +66,19 @@ export default async function InvitadosPage({
         <div className="mt-10">
           <TablaFamilias
             eventId={eventId}
-            familiasIniciales={familias ?? []}
+            familiasIniciales={
+              (familias ?? []) as unknown as Pick<
+                FamilyRow,
+                | 'id'
+                | 'nombre_familia'
+                | 'boletos_total'
+                | 'boletos_confirmados'
+                | 'boletos_usados'
+                | 'token'
+                | 'estado_confirmacion'
+                | 'checked_in'
+              >[]
+            }
             siteUrl={siteUrl()}
             estadoInicial={evento.estado}
             capacidadTotal={evento.capacidad_total}

@@ -2,17 +2,25 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
+import { esColumnaFaltante, limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { camposEntrada } from '@/lib/checkin/entrada';
+import { bloqueoCheckinSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { readStaffSession } from '@/lib/staff-session';
 import type { FamilyRow } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+const SELECT_CON_CONFIRMADOS =
+  'id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, checked_in, checked_in_at, estado_confirmacion';
+const SELECT_SIN_CONFIRMADOS =
+  'id, nombre_familia, boletos_total, boletos_usados, checked_in, checked_in_at, estado_confirmacion';
 
 type FamiliaManual = Pick<
   FamilyRow,
   | 'id'
   | 'nombre_familia'
   | 'boletos_total'
+  | 'boletos_confirmados'
   | 'boletos_usados'
   | 'checked_in'
   | 'checked_in_at'
@@ -49,14 +57,27 @@ export async function POST(request: Request) {
   }
 
   const db = supabaseAdmin();
-  const { data: familiaInicial, error: readError } = await db
+
+  const bloqueo = await bloqueoCheckinSiEventoNoPublico(db, eventId);
+  if (bloqueo) {
+    return NextResponse.json({ error: bloqueo.error }, { status: bloqueo.status });
+  }
+
+  let { data: familiaInicial, error: readError } = await db
     .from('families')
-    .select(
-      'id, nombre_familia, boletos_total, boletos_usados, checked_in, checked_in_at, estado_confirmacion',
-    )
+    .select(SELECT_CON_CONFIRMADOS)
     .eq('id', familyId)
     .eq('event_id', eventId)
     .maybeSingle<FamiliaManual>();
+
+  if (esColumnaFaltante(readError, 'boletos_confirmados')) {
+    ({ data: familiaInicial, error: readError } = await db
+      .from('families')
+      .select(SELECT_SIN_CONFIRMADOS)
+      .eq('id', familyId)
+      .eq('event_id', eventId)
+      .maybeSingle<FamiliaManual>());
+  }
 
   if (readError) {
     console.error('checkin-manual.select', readError.code, readError.message);
@@ -71,8 +92,8 @@ export async function POST(request: Request) {
   }
 
   let familia = familiaInicial;
-  let entran =
-    typeof cantidad === 'number' ? cantidad : familia.boletos_total - (familia.boletos_usados ?? 0);
+  const topeInicial = limiteBoletosFamilia(familia);
+  let entran = typeof cantidad === 'number' ? cantidad : topeInicial - (familia.boletos_usados ?? 0);
 
   for (let intento = 0; intento < 2; intento += 1) {
     if (familia.checked_in) {
@@ -101,7 +122,8 @@ export async function POST(request: Request) {
     }
 
     const usados = familia.boletos_usados ?? 0;
-    const restantes = familia.boletos_total - usados;
+    const tope = limiteBoletosFamilia(familia);
+    const restantes = tope - usados;
 
     if (restantes <= 0) {
       await db.from('checkin_logs').insert({
@@ -128,13 +150,13 @@ export async function POST(request: Request) {
 
     const { data: actualizadas, error: updateError } = await db
       .from('families')
-      .update(camposEntrada(sesion.nombre, 'manual', usados, entran, familia.boletos_total))
+      .update(camposEntrada(sesion.nombre, 'manual', usados, entran, tope))
       .eq('id', familyId)
       .eq('event_id', eventId)
       .eq('checked_in', false)
       .eq('estado_confirmacion', 'confirmado')
       .eq('boletos_usados', usados)
-      .lte('boletos_usados', familia.boletos_total - entran)
+      .lte('boletos_usados', tope - entran)
       .select('id, nombre_familia, boletos_total, boletos_usados, checked_in_at')
       .returns<
         Pick<
@@ -167,20 +189,27 @@ export async function POST(request: Request) {
         boletosUsados: reg.boletos_usados,
         boletosTotal: reg.boletos_total,
         mensaje:
-          reg.boletos_usados < reg.boletos_total
-            ? `Registrados ${entran} boletos (${reg.boletos_usados} de ${reg.boletos_total}).`
+          reg.boletos_usados < limiteBoletosFamilia({ ...familia, ...reg })
+            ? `Registrados ${entran} boletos (${reg.boletos_usados} de ${limiteBoletosFamilia({ ...familia, ...reg })}).`
             : 'Acceso registrado a mano.',
       });
     }
 
-    const { data: relectura, error: rereadError } = await db
+    let { data: relectura, error: rereadError } = await db
       .from('families')
-      .select(
-        'id, nombre_familia, boletos_total, boletos_usados, checked_in, checked_in_at, estado_confirmacion',
-      )
+      .select(SELECT_CON_CONFIRMADOS)
       .eq('id', familyId)
       .eq('event_id', eventId)
       .maybeSingle<FamiliaManual>();
+
+    if (esColumnaFaltante(rereadError, 'boletos_confirmados')) {
+      ({ data: relectura, error: rereadError } = await db
+        .from('families')
+        .select(SELECT_SIN_CONFIRMADOS)
+        .eq('id', familyId)
+        .eq('event_id', eventId)
+        .maybeSingle<FamiliaManual>());
+    }
 
     if (rereadError) {
       console.error('checkin-manual.reselect', rereadError.code, rereadError.message);
@@ -196,7 +225,7 @@ export async function POST(request: Request) {
 
     familia = relectura;
     if (typeof cantidad !== 'number') {
-      entran = familia.boletos_total - (familia.boletos_usados ?? 0);
+      entran = limiteBoletosFamilia(familia) - (familia.boletos_usados ?? 0);
     }
   }
 

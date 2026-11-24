@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
+import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { verificarQr } from '@/lib/checkin/verificar-qr';
+import { bloqueoCheckinSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { readStaffSession } from '@/lib/staff-session';
 
 export const dynamic = 'force-dynamic';
@@ -48,6 +50,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Inicia sesión con tu PIN.' }, { status: 401 });
   }
 
+  const bloqueo = await bloqueoCheckinSiEventoNoPublico(supabaseAdmin(), eventId);
+  if (bloqueo) {
+    return NextResponse.json({ error: bloqueo.error }, { status: bloqueo.status });
+  }
+
   const verificado = await verificarQr(qr, eventId);
 
   if (verificado.resultado === 'error') {
@@ -84,17 +91,20 @@ export async function POST(request: Request) {
   }
 
   const { boletos_total: total, boletos_usados: usados } = verificado.familia;
-  const restantes = Math.max(0, total - usados);
+  const tope = limiteBoletosFamilia(verificado.familia);
+  const restantes = Math.max(0, tope - usados);
 
   return NextResponse.json<Respuesta>({
     resultado: 'listo',
     familia: verificado.familia.nombre_familia,
-    boletos: total,
+    boletos: tope,
     boletosUsados: usados,
     boletosRestantes: restantes,
     mensaje:
       usados > 0
-        ? `Ya entraron ${usados} de ${total}. ¿Cuántos entran ahora?`
-        : '¿Cuántos entran ahora?',
+        ? `Ya entraron ${usados} de ${tope}. ¿Cuántos entran ahora?`
+        : tope < total
+          ? `Confirmaron ${tope} de ${total} boletos. ¿Cuántos entran ahora?`
+          : '¿Cuántos entran ahora?',
   });
 }

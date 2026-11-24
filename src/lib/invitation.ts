@@ -6,6 +6,7 @@ import {
   TEMPLATE_POR_DEFECTO,
   esTemplateId,
 } from '@/lib/templates/catalogo';
+import { limiteBoletosFamilia, esColumnaFaltante } from '@/lib/boletos-familia';
 import { eventoAbiertoAInvitados } from '@/lib/invitacion-publica';
 import type { EventRow, FamilyRow, InvitationView } from '@/lib/types';
 
@@ -22,9 +23,11 @@ export type ResultadoInvitacion =
 export async function cargarInvitacion(token: string): Promise<ResultadoInvitacion> {
   const db = supabaseAdmin();
 
-  const { data: familia, error: errFamilia } = await db
+  let { data: familia, error: errFamilia } = await db
     .from('families')
-    .select('id, event_id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in')
+    .select(
+      'id, event_id, nombre_familia, boletos_total, boletos_confirmados, boletos_usados, estado_confirmacion, checked_in',
+    )
     .eq('token', token)
     .maybeSingle<
       Pick<
@@ -33,11 +36,22 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
         | 'event_id'
         | 'nombre_familia'
         | 'boletos_total'
+        | 'boletos_confirmados'
         | 'boletos_usados'
         | 'estado_confirmacion'
         | 'checked_in'
       >
     >();
+
+  if (esColumnaFaltante(errFamilia, 'boletos_confirmados')) {
+    ({ data: familia, error: errFamilia } = await db
+      .from('families')
+      .select(
+        'id, event_id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in',
+      )
+      .eq('token', token)
+      .maybeSingle());
+  }
 
   if (errFamilia) {
     console.error('invitation.families', errFamilia.message, errFamilia.code);
@@ -89,7 +103,7 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
         boletos: familia.boletos_total,
         estado: familia.estado_confirmacion,
         yaEntro: familia.checked_in || (familia.boletos_usados ?? 0) > 0,
-        entradaCompleta: (familia.boletos_usados ?? 0) >= familia.boletos_total,
+        entradaCompleta: (familia.boletos_usados ?? 0) >= limiteBoletosFamilia(familia),
       },
       evento: {
         quinceanera: evento.quinceanera_nombre,

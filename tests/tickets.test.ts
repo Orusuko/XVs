@@ -25,6 +25,21 @@ describe('summarizeTickets', () => {
     expect(resumen.porIngresar).toBe(2);
   });
 
+  test('confirmados usan boletos_confirmados cuando existe', () => {
+    const resumen = summarizeTickets([
+      {
+        boletos_total: 5,
+        boletos_confirmados: 2,
+        boletos_usados: 0,
+        estado_confirmacion: 'confirmado',
+        checked_in: false,
+      },
+    ]);
+    expect(resumen.confirmados).toBe(2);
+    expect(resumen.porIngresar).toBe(2);
+    expect(resumen.total).toBe(5);
+  });
+
   test('an empty guest list produces zeroes rather than NaN', () => {
     expect(summarizeTickets([])).toEqual({
       total: 0,

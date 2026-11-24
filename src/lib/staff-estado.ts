@@ -8,6 +8,7 @@ export type FamiliaStaff = {
   id: string;
   nombre_familia: string;
   boletos_total: number;
+  boletos_confirmados?: number | null;
   boletos_usados: number;
   estado_confirmacion: string;
   checked_in: boolean;

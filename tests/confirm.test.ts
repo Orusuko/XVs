@@ -9,6 +9,7 @@ const familiaDb = {
   event_id: 'ev-1',
   nombre_familia: 'López',
   boletos_total: 4,
+  boletos_confirmados: null as number | null,
   boletos_usados: 0,
   estado_confirmacion: 'pendiente' as 'pendiente' | 'confirmado' | 'rechazado',
   qr_jti: null as string | null,
@@ -48,12 +49,28 @@ vi.mock('@/lib/supabase/admin', () => ({
           },
           select: async () => {
             if (
+              fallaColumnaConfirmados &&
+              'boletos_confirmados' in valores
+            ) {
+              return {
+                data: null,
+                error: {
+                  code: '42703',
+                  message: 'column families.boletos_confirmados does not exist',
+                },
+              };
+            }
+            if (
               ('checked_in' in filtros && familiaDb.checked_in !== filtros.checked_in) ||
               ('boletos_usados' in filtros && familiaDb.boletos_usados !== filtros.boletos_usados)
             ) {
               return { data: [], error: null };
             }
-            Object.assign(familiaDb, valores);
+            const { boletos_confirmados, ...resto } = valores;
+            Object.assign(familiaDb, resto);
+            if (boletos_confirmados !== undefined && !fallaColumnaConfirmados) {
+              familiaDb.boletos_confirmados = boletos_confirmados as number | null;
+            }
             return { data: [{ id: familiaDb.id, qr_jti: familiaDb.qr_jti }], error: null };
           },
         };
@@ -66,12 +83,18 @@ vi.mock('@/lib/supabase/admin', () => ({
 
 const { POST } = await import('@/app/api/confirm/[token]/route');
 
-function confirmRequest(asistira: boolean, ip: string) {
+let fallaColumnaConfirmados = false;
+
+function confirmRequest(
+  asistira: boolean,
+  ip: string,
+  extras?: { boletos_confirmados?: number },
+) {
   return POST(
     new Request('http://localhost/api/confirm/tok-1', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-forwarded-for': ip },
-      body: JSON.stringify({ asistira }),
+      body: JSON.stringify({ asistira, ...extras }),
     }),
     { params: Promise.resolve({ token: 'tok-1' }) },
   );
@@ -81,7 +104,9 @@ describe('POST /api/confirm/[token]', () => {
   beforeEach(() => {
     resetRateLimitStore();
     estadoEvento = 'publicado';
+    fallaColumnaConfirmados = false;
     familiaDb.boletos_usados = 0;
+    familiaDb.boletos_confirmados = null;
     familiaDb.estado_confirmacion = 'pendiente';
     familiaDb.qr_jti = null;
     familiaDb.checked_in = false;
@@ -125,6 +150,23 @@ describe('POST /api/confirm/[token]', () => {
 
     const rConfirmar = await confirmRequest(true, '10.0.1.4');
     expect(rConfirmar.status).toBe(409);
+  });
+
+  test('RSVP parcial guarda boletos_confirmados y responde boletos en JSON', async () => {
+    const respuesta = await confirmRequest(true, '10.0.1.6', { boletos_confirmados: 2 });
+    const datos = await respuesta.json();
+    expect(respuesta.status).toBe(200);
+    expect(datos.boletos).toBe(2);
+    expect(familiaDb.boletos_confirmados).toBe(2);
+  });
+
+  test('degrada sin 500 si boletos_confirmados no existe en la base', async () => {
+    fallaColumnaConfirmados = true;
+    const respuesta = await confirmRequest(true, '10.0.1.7', { boletos_confirmados: 2 });
+    expect(respuesta.status).toBe(200);
+    const datos = await respuesta.json();
+    expect(datos.estado).toBe('confirmado');
+    expect(familiaDb.boletos_confirmados).toBeNull();
   });
 
   test('rechaza pasar a rechazado si ya entraron boletos parciales', async () => {
