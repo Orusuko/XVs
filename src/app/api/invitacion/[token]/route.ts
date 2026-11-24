@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { loadInvitation } from '@/lib/invitation';
+import { cargarInvitacion } from '@/lib/invitation';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
 
@@ -13,13 +13,20 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
     return NextResponse.json({ error: 'Demasiadas solicitudes.' }, { status: 429 });
   }
 
-  const invitacion = await loadInvitation(token);
+  const resultado = await cargarInvitacion(token);
 
-  if (!invitacion) {
+  if (resultado.tipo === 'indisponible') {
+    return NextResponse.json(
+      { error: 'Invitación temporalmente no disponible.' },
+      { status: 503 },
+    );
+  }
+
+  if (resultado.tipo !== 'ok') {
     return NextResponse.json({ error: 'Invitación no encontrada.' }, { status: 404 });
   }
 
-  return NextResponse.json(invitacion, {
+  return NextResponse.json(resultado.vista, {
     headers: { 'Cache-Control': 'no-store' },
   });
 }

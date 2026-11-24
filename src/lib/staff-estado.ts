@@ -29,7 +29,7 @@ const TIMEOUT_MS = 15_000;
  * Staff devices are not Supabase-authenticated, so they poll rather than
  * subscribe. Five seconds keeps every door close enough to the same number.
  */
-export function useEstadoStaff(eventId: string) {
+export function useEstadoStaff(eventId: string, contexto: 'conteo' | 'historial' = 'conteo') {
   const [estado, setEstado] = useState<EstadoStaff | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -55,9 +55,15 @@ export function useEstadoStaff(eventId: string) {
 
       if (!respuesta.ok) {
         const datos = await respuesta.json().catch(() => null);
+        let mensaje = datos?.error as string | undefined;
+        if (mensaje === 'No pudimos leer el conteo.' && contexto === 'historial') {
+          mensaje = 'No pudimos leer el historial de familias. Si el problema sigue, avisa al organizador.';
+        }
         setError(
-          datos?.error ??
-            'No pudimos leer el conteo. Si el problema sigue, avisa al organizador.',
+          mensaje ??
+            (contexto === 'historial'
+              ? 'No pudimos leer el historial de familias. Si el problema sigue, avisa al organizador.'
+              : 'No pudimos leer el conteo. Si el problema sigue, avisa al organizador.'),
         );
         setCargando(false);
         return;
@@ -88,7 +94,7 @@ export function useEstadoStaff(eventId: string) {
     } finally {
       clearTimeout(reloj);
     }
-  }, [eventId]);
+  }, [eventId, contexto]);
 
   useEffect(() => {
     const inmediato = setTimeout(() => {

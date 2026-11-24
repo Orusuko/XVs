@@ -48,7 +48,7 @@ export default async function InvitadosPage({
   const errorLista =
     errFamilias &&
     (errFamilias.code === '42703'
-      ? 'La base de datos necesita la migración de boletos parciales (0004_boletos_usados.sql). Hasta entonces la lista no puede cargarse.'
+      ? 'La base de datos necesita la migración de boletos parciales (0005_verificar_boletos_usados.sql, o 0004_boletos_usados.sql). Hasta entonces la lista no puede cargarse.'
       : 'No pudimos cargar la lista de familias. Inténtalo de nuevo.');
 
   return (

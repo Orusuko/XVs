@@ -6,7 +6,7 @@ import { formatearHora } from '@/lib/format';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
 
 export function VistaHistorial({ eventId }: { eventId: string }) {
-  const { estado, error, cargando, refrescar } = useEstadoStaff(eventId);
+  const { estado, error, cargando, refrescar } = useEstadoStaff(eventId, 'historial');
   const [busqueda, setBusqueda] = useState('');
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});

@@ -1,6 +1,10 @@
 'use client';
 
-import { ETIQUETAS_MENSAJES, MENSAJES_INVITACION } from '@/lib/mensajes-invitacion';
+import {
+  ETIQUETAS_MENSAJES,
+  MENSAJES_INVITACION,
+  PLACEHOLDER_MENSAJES,
+} from '@/lib/mensajes-invitacion';
 
 type Props = {
   valor: string;
@@ -37,6 +41,7 @@ export function SelectorMensaje({
             <p className="font-ticket text-[10px] uppercase tracking-[0.2em] text-oro">
               {elegida ? 'Elegido' : ETIQUETAS_MENSAJES[texto]}
             </p>
+            <p className="mt-1 text-xs text-tinta-suave">{PLACEHOLDER_MENSAJES[texto]}</p>
             <p className="mt-2 font-display text-lg leading-relaxed text-tinta">{texto}</p>
           </button>
         );

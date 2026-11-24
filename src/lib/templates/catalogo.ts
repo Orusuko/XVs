@@ -149,7 +149,7 @@ export const PLANTILLAS: TemplateInfo[] = [
     layout: 'vals',
     familia: 'gala',
     nombre: 'Vals champán',
-    descripcion: 'Medallón centrado, champán e marfil.',
+    descripcion: 'Medallón centrado, champán y marfil.',
     paleta: ['#6b5428', '#b89858', '#f3ede4'],
   },
   {
