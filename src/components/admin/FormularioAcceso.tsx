@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boton } from '@/components/ui/Boton';
+import { validarCorreo } from '@/lib/validacion-formularios';
 
 const CAMPO =
   'mt-3 min-h-11 w-full rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino';
@@ -23,8 +24,9 @@ export function FormularioAcceso() {
   }
 
   async function enviar(accion: 'entrar' | 'crear') {
-    if (!correo.trim()) {
-      setError('Escribe el correo.');
+    const falloCorreo = validarCorreo(correo);
+    if (falloCorreo) {
+      setError(falloCorreo);
       return;
     }
     if (contrasena.length < 8) {
@@ -64,14 +66,13 @@ export function FormularioAcceso() {
   }
 
   return (
-    <form onSubmit={entrar} className="talon px-6 pb-8 pt-9">
+    <form onSubmit={entrar} noValidate className="talon px-6 pb-8 pt-9">
       <label htmlFor="correo" className={ETIQUETA}>
         Correo
       </label>
       <input
         id="correo"
         type="email"
-        required
         autoComplete="email"
         value={correo}
         onChange={(evento) => setCorreo(evento.target.value)}
@@ -85,8 +86,6 @@ export function FormularioAcceso() {
       <input
         id="contrasena"
         type="password"
-        required
-        minLength={8}
         maxLength={72}
         autoComplete="current-password"
         value={contrasena}

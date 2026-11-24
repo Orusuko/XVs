@@ -20,7 +20,7 @@ export function ValsTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1 text-center">
           <div className="relative mx-auto flex h-36 w-36 items-center justify-center">
             <MedallonVals className="absolute inset-0 h-full w-full" />

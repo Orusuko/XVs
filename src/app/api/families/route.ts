@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
 import { organizadorActual } from '@/lib/organizador';
+import { MAX_NOMBRE, validarNombreFamiliaApi } from '@/lib/validacion-formularios';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,12 +10,9 @@ type NuevaFamilia = { nombre_familia: string; boletos_total: number };
 function validar(fila: unknown): fila is NuevaFamilia {
   if (typeof fila !== 'object' || fila === null) return false;
   const { nombre_familia: nombre, boletos_total: boletos } = fila as NuevaFamilia;
-  return (
-    typeof nombre === 'string' &&
-    nombre.trim() !== '' &&
-    Number.isInteger(boletos) &&
-    boletos > 0
-  );
+  if (typeof nombre !== 'string' || nombre.trim() === '') return false;
+  if (nombre.trim().length > MAX_NOMBRE) return false;
+  return Number.isInteger(boletos) && boletos > 0;
 }
 
 async function exigirOrganizador() {
@@ -97,9 +95,57 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Agrega al menos una familia.' }, { status: 400 });
   }
 
-  if (!familias.every(validar)) {
+  const conNombre = familias.filter(
+    (fila) =>
+      typeof fila === 'object' &&
+      fila !== null &&
+      typeof (fila as NuevaFamilia).nombre_familia === 'string' &&
+      (fila as NuevaFamilia).nombre_familia.trim() !== '',
+  );
+
+  if (conNombre.length === 0) {
+    return NextResponse.json({ error: 'Agrega al menos una familia con nombre.' }, { status: 400 });
+  }
+
+  const omitidas = familias.filter((fila) => {
+    if (typeof fila !== 'object' || fila === null) return false;
+    const nombre = (fila as NuevaFamilia).nombre_familia;
+    const boletos = (fila as NuevaFamilia).boletos_total;
+    return (
+      typeof nombre === 'string' &&
+      nombre.trim() !== '' &&
+      (typeof boletos !== 'number' || boletos < 1)
+    );
+  });
+
+  const validas = familias.filter(validar);
+
+  for (const fila of validas) {
+    const falloNombre = validarNombreFamiliaApi(fila.nombre_familia);
+    if (falloNombre) {
+      return NextResponse.json({ error: falloNombre }, { status: 400 });
+    }
+  }
+
+  const nombreLargo = familias.find((fila) => {
+    if (typeof fila !== 'object' || fila === null) return false;
+    const nombre = (fila as NuevaFamilia).nombre_familia;
+    return typeof nombre === 'string' && nombre.trim().length > MAX_NOMBRE;
+  });
+
+  if (nombreLargo) {
     return NextResponse.json(
-      { error: 'Cada familia necesita un nombre y al menos un boleto.' },
+      { error: `El nombre de la familia no puede pasar de ${MAX_NOMBRE} caracteres.` },
+      { status: 400 },
+    );
+  }
+
+  if (validas.length === 0) {
+    return NextResponse.json(
+      {
+        error: 'Agrega al menos una familia con nombre y al menos un boleto.',
+        omitidas: omitidas.length,
+      },
       { status: 400 },
     );
   }
@@ -116,7 +162,7 @@ export async function POST(request: Request) {
   }
 
   // 21 URL-safe characters: long enough that guessing a link is not worth trying.
-  const filas = familias.map((familia) => ({
+  const filas = validas.map((familia) => ({
     event_id: eventId,
     nombre_familia: familia.nombre_familia.trim(),
     boletos_total: familia.boletos_total,
@@ -136,7 +182,17 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ familias: data }, { status: 201 });
+  return NextResponse.json(
+    {
+      familias: data,
+      omitidas: omitidas.length,
+      aviso:
+        omitidas.length > 0
+          ? `Se omitieron ${omitidas.length} ${omitidas.length === 1 ? 'familia' : 'familias'} sin boletos válidos.`
+          : undefined,
+    },
+    { status: 201 },
+  );
 }
 
 export async function PATCH(request: Request) {
@@ -154,7 +210,13 @@ export async function PATCH(request: Request) {
   }
 
   const cambios: Record<string, unknown> = {};
-  if (typeof nombre === 'string' && nombre.trim() !== '') cambios.nombre_familia = nombre.trim();
+  if (typeof nombre === 'string' && nombre.trim() !== '') {
+    const falloNombre = validarNombreFamiliaApi(nombre);
+    if (falloNombre) {
+      return NextResponse.json({ error: falloNombre }, { status: 400 });
+    }
+    cambios.nombre_familia = nombre.trim();
+  }
   if (Number.isInteger(boletos) && (boletos as number) > 0) cambios.boletos_total = boletos;
 
   if (Object.keys(cambios).length === 0) {

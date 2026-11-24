@@ -6,7 +6,7 @@ import { formatearHora } from '@/lib/format';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
 
 export function VistaHistorial({ eventId }: { eventId: string }) {
-  const { estado, error, refrescar } = useEstadoStaff(eventId);
+  const { estado, error, cargando, refrescar } = useEstadoStaff(eventId);
   const [busqueda, setBusqueda] = useState('');
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
@@ -61,11 +61,29 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
   }
 
   if (error) {
+    const sesion = error.includes('sesión');
     return (
-      <EstadoHoja tono="tinta" etiqueta="Historial" titulo="Se cortó la sesión" detalle={error} />
+      <EstadoHoja
+        tono="tinta"
+        etiqueta="Historial"
+        titulo={sesion ? 'Se cortó la sesión' : 'No pudimos cargar'}
+        detalle={error}
+        accion={
+          sesion ? undefined : (
+            <button
+              type="button"
+              onClick={() => void refrescar()}
+              className="min-h-11 cursor-pointer text-oro-claro underline underline-offset-4"
+            >
+              Reintentar
+            </button>
+          )
+        }
+      />
     );
   }
-  if (!estado) {
+
+  if (cargando || !estado) {
     return (
       <EstadoHoja
         tono="tinta"

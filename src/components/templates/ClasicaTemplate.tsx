@@ -16,7 +16,7 @@ export function ClasicaTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} textura-papel min-h-screen px-5 py-12`.trim()}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1 text-center">
           <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">
             Mis XV años

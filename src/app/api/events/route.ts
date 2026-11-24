@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { organizadorActual } from '@/lib/organizador';
+import { validarCamposEvento } from '@/lib/validacion-formularios';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,15 +42,21 @@ export async function POST(request: Request) {
   if (!actual) return respuesta;
 
   const body = (await request.json()) as Record<string, unknown>;
-  const nombre = body.quinceanera_nombre;
+  const campos = soloCamposEditables(body);
+  const nombre = campos.quinceanera_nombre;
 
   if (typeof nombre !== 'string' || nombre.trim() === '') {
     return NextResponse.json({ error: 'Escribe el nombre de la quinceañera.' }, { status: 400 });
   }
 
+  const falloValidacion = validarCamposEvento(campos);
+  if (falloValidacion) {
+    return NextResponse.json({ error: falloValidacion }, { status: 400 });
+  }
+
   const { data, error } = await actual.db
     .from('events')
-    .insert({ ...soloCamposEditables(body), admin_id: actual.sesion.id })
+    .insert({ ...campos, admin_id: actual.sesion.id })
     .select('id')
     .single();
 
@@ -75,9 +82,35 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
   }
 
+  const cambios = soloCamposEditables(body);
+
+  const falloValidacion = validarCamposEvento(cambios);
+  if (falloValidacion) {
+    return NextResponse.json({ error: falloValidacion }, { status: 400 });
+  }
+
+  if (cambios.estado === 'publicado') {
+    const { count, error: errCount } = await actual.db
+      .from('families')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id);
+
+    if (errCount) {
+      console.error('events.publish', errCount.message);
+      return NextResponse.json({ error: 'No pudimos verificar la lista de invitados.' }, { status: 500 });
+    }
+
+    if (!count || count < 1) {
+      return NextResponse.json(
+        { error: 'Agrega al menos una familia con boletos antes de publicar.' },
+        { status: 400 },
+      );
+    }
+  }
+
   const { data, error } = await actual.db
     .from('events')
-    .update(soloCamposEditables(body))
+    .update(cambios)
     .eq('id', id)
     .eq('admin_id', actual.sesion.id)
     .select('id');

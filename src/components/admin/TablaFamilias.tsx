@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Boton } from '@/components/ui/Boton';
+import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
+import { Toast } from '@/components/ui/Toast';
+import { MAX_NOMBRE } from '@/lib/validacion-formularios';
 import { summarizeTickets } from '@/lib/tickets';
 import type { FamilyRow } from '@/lib/types';
 
@@ -24,6 +27,7 @@ type Props = {
   siteUrl: string;
   estadoInicial: string;
   capacidadTotal: number | null;
+  errorServidor?: string | null;
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -38,6 +42,7 @@ export function TablaFamilias({
   siteUrl,
   estadoInicial,
   capacidadTotal,
+  errorServidor = null,
 }: Props) {
   const [familias, setFamilias] = useState<Familia[]>(familiasIniciales);
   const [estado, setEstado] = useState(estadoInicial);
@@ -50,8 +55,11 @@ export function TablaFamilias({
   const [guardando, setGuardando] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ mensaje: string; tono: 'exito' | 'alerta' } | null>(null);
+  const [modalEstado, setModalEstado] = useState<'publicado' | 'borrador' | null>(null);
 
   const publicado = estado === 'publicado';
+  const primerToken = familias[0]?.token;
 
   useEffect(() => {
     let vivo = true;
@@ -112,13 +120,16 @@ export function TablaFamilias({
   const superaAforo =
     capacidadTotal != null && capacidadTotal > 0 && resumen.total > capacidadTotal;
 
-  async function cambiarEstadoEvento(nuevoEstado: 'publicado' | 'borrador') {
-    const mensaje =
-      nuevoEstado === 'publicado'
-        ? 'Las familias podrán abrir su enlace.'
-        : 'Los enlaces dejan de enviarse. Quien ya los tenga sigue pudiendo abrirlos.';
-    if (!window.confirm(mensaje)) return;
+  function solicitarCambioEstado(nuevoEstado: 'publicado' | 'borrador') {
+    if (nuevoEstado === 'publicado' && familias.length === 0) {
+      setError('Agrega al menos una familia con boletos antes de publicar.');
+      return;
+    }
+    setModalEstado(nuevoEstado);
+  }
 
+  async function cambiarEstadoEvento(nuevoEstado: 'publicado' | 'borrador') {
+    setModalEstado(null);
     setPublicando(true);
     setError(null);
 
@@ -137,6 +148,12 @@ export function TablaFamilias({
     }
 
     setEstado(nuevoEstado);
+    mostrarToast(nuevoEstado === 'publicado' ? 'Evento publicado.' : 'Volviste el evento a borrador.');
+  }
+
+  function mostrarToast(mensaje: string, tono: 'exito' | 'alerta' = 'exito') {
+    setToast({ mensaje, tono });
+    window.setTimeout(() => setToast(null), 2800);
   }
 
   async function quitarFamilia(familia: Familia) {
@@ -223,8 +240,18 @@ export function TablaFamilias({
         boletos_total: Number(fila.boletos_total),
       }));
 
+    const omitidasLocal = borradores.filter(
+      (fila) =>
+        fila.nombre_familia.trim() !== '' &&
+        (Number(fila.boletos_total) < 1 || !Number.isInteger(Number(fila.boletos_total))),
+    );
+
     if (listas.length === 0) {
-      setError('Agrega al menos una familia con nombre y boletos.');
+      setError(
+        omitidasLocal.length > 0
+          ? 'Las familias sin boletos válidos no se guardan. Corrige los boletos o quita esas filas.'
+          : 'Agrega al menos una familia con nombre y boletos.',
+      );
       return;
     }
 
@@ -242,7 +269,14 @@ export function TablaFamilias({
 
     if (!respuesta.ok) {
       setError(datos.error ?? 'No pudimos guardar la lista.');
+      mostrarToast(datos.error ?? 'No pudimos guardar la lista.', 'alerta');
       return;
+    }
+
+    if (datos.aviso) {
+      mostrarToast(datos.aviso, 'alerta');
+    } else {
+      mostrarToast('Lista guardada.');
     }
 
     setFamilias([
@@ -268,11 +302,21 @@ export function TablaFamilias({
           <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-exito">
             Publicado
           </span>
+          {primerToken && (
+            <a
+              href={`${siteUrl}/invitacion/${primerToken}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center text-sm text-vino underline underline-offset-4"
+            >
+              Ver invitación pública
+            </a>
+          )}
           <Boton
             type="button"
             variante="contorno"
             disabled={publicando}
-            onClick={() => cambiarEstadoEvento('borrador')}
+            onClick={() => solicitarCambioEstado('borrador')}
           >
             Volver a borrador
           </Boton>
@@ -282,7 +326,11 @@ export function TablaFamilias({
           <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">
             Borrador
           </span>
-          <Boton type="button" disabled={publicando} onClick={() => cambiarEstadoEvento('publicado')}>
+          <Boton
+            type="button"
+            disabled={publicando || familias.length === 0}
+            onClick={() => solicitarCambioEstado('publicado')}
+          >
             Publicar
           </Boton>
         </>
@@ -290,10 +338,37 @@ export function TablaFamilias({
     </div>
   );
 
+  if (errorServidor) {
+    return (
+      <section>
+        {barraPublicacion}
+        <p className="text-sm text-alerta">{errorServidor}</p>
+      </section>
+    );
+  }
+
   if (capturando) {
     return (
       <section>
         {barraPublicacion}
+        <ModalConfirmacion
+          abierto={modalEstado !== null}
+          titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
+          detalle={
+            modalEstado === 'publicado' ? (
+              'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
+            ) : (
+              <>
+                El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
+                enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
+              </>
+            )
+          }
+          confirmarEtiqueta={modalEstado === 'publicado' ? 'Publicar' : 'Volver a borrador'}
+          onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
+          onCancelar={() => setModalEstado(null)}
+        />
+        <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
         <div className="talon px-5 pb-6 pt-8">
           <div className="space-y-3">
             {borradores.map((fila, indice) => (
@@ -306,6 +381,7 @@ export function TablaFamilias({
                     id={`familia-${indice}`}
                     value={fila.nombre_familia}
                     placeholder="Familia"
+                    maxLength={MAX_NOMBRE}
                     onChange={(campo) =>
                       actualizarBorrador(indice, { ...fila, nombre_familia: campo.target.value })
                     }
@@ -379,6 +455,24 @@ export function TablaFamilias({
   return (
     <section>
       {barraPublicacion}
+      <ModalConfirmacion
+        abierto={modalEstado !== null}
+        titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
+        detalle={
+          modalEstado === 'publicado' ? (
+            'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
+          ) : (
+            <>
+              El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
+              enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
+            </>
+          )
+        }
+        confirmarEtiqueta={modalEstado === 'publicado' ? 'Publicar' : 'Volver a borrador'}
+        onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
+        onCancelar={() => setModalEstado(null)}
+      />
+      <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato etiqueta="Boletos" valor={resumen.total} />
@@ -422,13 +516,14 @@ export function TablaFamilias({
                     {editando ? (
                       <input
                         value={edicion.nombre_familia}
+                        maxLength={MAX_NOMBRE}
                         onChange={(campo) =>
                           setEdicion({ ...edicion, nombre_familia: campo.target.value })
                         }
                         className="min-h-11 w-full min-w-[140px] rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
                       />
                     ) : (
-                      familia.nombre_familia
+                      <span className="break-words">{familia.nombre_familia}</span>
                     )}
                   </td>
                   <td className="py-3 font-ticket text-tinta">

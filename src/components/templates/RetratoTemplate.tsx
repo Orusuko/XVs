@@ -18,7 +18,7 @@ export function RetratoTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1">
           <div className="marco-retrato overflow-hidden bg-papel-alto">
             {foto ? (

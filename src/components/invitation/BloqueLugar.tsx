@@ -3,6 +3,7 @@
 import { buildGoogleCalendarUrl, buildIcs } from '@/lib/calendar/ics';
 import { formatearFecha, formatearHora } from '@/lib/format';
 import { IconoPin } from '@/components/ui/IconoPin';
+import { normalizarMapsUrl } from '@/lib/validacion-formularios';
 import type { Lugar } from '@/lib/types';
 
 type Props = {
@@ -18,6 +19,7 @@ const ACCION =
 export function BloqueLugar({ etiqueta, lugar, quinceanera, className = '' }: Props) {
   const inicio = new Date(lugar.fecha_hora);
   const valida = !Number.isNaN(inicio.getTime());
+  const enlaceMapa = normalizarMapsUrl(lugar.maps_url);
 
   const evento = {
     title: `${etiqueta} — XV años de ${quinceanera}`,
@@ -53,9 +55,9 @@ export function BloqueLugar({ etiqueta, lugar, quinceanera, className = '' }: Pr
 
       {/* One row, one baseline: pin + Agendar + Google Calendar all share the same 44px chip. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-        {lugar.maps_url && (
+        {enlaceMapa && (
           <a
-            href={lugar.maps_url}
+            href={enlaceMapa}
             target="_blank"
             rel="noreferrer"
             aria-label={`Ver ${lugar.nombre} en el mapa`}

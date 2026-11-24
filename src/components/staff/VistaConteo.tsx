@@ -3,34 +3,63 @@
 import { useState } from 'react';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
+import { EstadoCargaStaff } from '@/components/staff/EstadoCargaStaff';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
 
 export function VistaConteo({ eventId }: { eventId: string }) {
-  const { estado, error } = useEstadoStaff(eventId);
+  const { estado, error, cargando, refrescar } = useEstadoStaff(eventId);
   const [pestana, setPestana] = useState<'ingresados' | 'pendientes'>('ingresados');
 
   if (error) {
-    return (
-      <EstadoHoja tono="tinta" etiqueta="Conteo" titulo="Se cortó la sesión" detalle={error} />
-    );
-  }
-
-  if (!estado) {
+    const sesion = error.includes('sesión');
     return (
       <EstadoHoja
         tono="tinta"
         etiqueta="Conteo"
-        titulo="Preparando el conteo"
-        detalle="Un momento, estamos pidiendo los boletos de esta noche."
+        titulo={sesion ? 'Se cortó la sesión' : 'No pudimos cargar'}
+        detalle={error}
+        accion={
+          sesion ? undefined : (
+            <button
+              type="button"
+              onClick={() => void refrescar()}
+              className="min-h-11 cursor-pointer text-oro-claro underline underline-offset-4"
+            >
+              Reintentar
+            </button>
+          )
+        }
       />
     );
   }
 
+  return (
+    <EstadoCargaStaff
+      etiqueta="Conteo"
+      tituloCarga="Preparando el conteo"
+      detalleCarga="Un momento, estamos pidiendo los boletos de esta noche."
+      cargando={cargando || !estado}
+      error={null}
+      onReintentar={() => void refrescar()}
+    >
+      {estado && <ContenidoConteo estado={estado} pestana={pestana} onPestana={setPestana} />}
+    </EstadoCargaStaff>
+  );
+}
+
+function ContenidoConteo({
+  estado,
+  pestana,
+  onPestana,
+}: {
+  estado: NonNullable<ReturnType<typeof useEstadoStaff>['estado']>;
+  pestana: 'ingresados' | 'pendientes';
+  onPestana: (p: 'ingresados' | 'pendientes') => void;
+}) {
   const { resumen, evento } = estado;
   const aforo = evento.capacidadTotal;
   const porcentaje = aforo ? Math.min(100, Math.round((resumen.ingresados / aforo) * 100)) : null;
   const casiLleno = porcentaje !== null && porcentaje >= 85;
-
   const lista = pestana === 'ingresados' ? estado.ingresados : estado.pendientes;
 
   return (
@@ -78,12 +107,12 @@ export function VistaConteo({ eventId }: { eventId: string }) {
       <div className="mt-10 flex border-b border-papel/15">
         <Pestana
           activa={pestana === 'ingresados'}
-          onClick={() => setPestana('ingresados')}
+          onClick={() => onPestana('ingresados')}
           etiqueta={`Ingresados (${estado.ingresados.length})`}
         />
         <Pestana
           activa={pestana === 'pendientes'}
-          onClick={() => setPestana('pendientes')}
+          onClick={() => onPestana('pendientes')}
           etiqueta={`Pendientes (${estado.pendientes.length})`}
         />
       </div>
@@ -104,7 +133,7 @@ export function VistaConteo({ eventId }: { eventId: string }) {
           {lista.map((familia) => (
             <li key={familia.id} className="flex items-center justify-between py-4">
               <span>
-                <span className="block text-papel">{familia.nombre_familia}</span>
+                <span className="block break-words text-papel">{familia.nombre_familia}</span>
                 {familia.checked_in_at && (
                   <span className="mt-1 block font-ticket text-xs text-papel/50">
                     {formatearHora(familia.checked_in_at)}
