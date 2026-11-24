@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+vi.mock('server-only', () => ({}));
 import { resetRateLimitStore } from '@/lib/rate-limit';
 import { verifyQrToken } from '@/lib/qr/verify';
 
@@ -13,9 +15,21 @@ const familiaDb = {
   checked_in: false,
 };
 
+let estadoEvento = 'publicado';
+
 vi.mock('@/lib/supabase/admin', () => ({
   supabaseAdmin: () => ({
-    from: () => ({
+    from: (tabla: string) => {
+      if (tabla === 'events') {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: { estado: estadoEvento }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {
       select: () => ({
         eq: () => ({
           maybeSingle: async () => ({ data: { ...familiaDb }, error: null }),
@@ -45,7 +59,8 @@ vi.mock('@/lib/supabase/admin', () => ({
         };
         return chain;
       },
-    }),
+    };
+    },
   }),
 }));
 
@@ -65,10 +80,19 @@ function confirmRequest(asistira: boolean, ip: string) {
 describe('POST /api/confirm/[token]', () => {
   beforeEach(() => {
     resetRateLimitStore();
+    estadoEvento = 'publicado';
     familiaDb.boletos_usados = 0;
     familiaDb.estado_confirmacion = 'pendiente';
     familiaDb.qr_jti = null;
     familiaDb.checked_in = false;
+  });
+
+  test('rechaza RSVP cuando el evento está en borrador', async () => {
+    estadoEvento = 'borrador';
+    const respuesta = await confirmRequest(true, '10.0.2.1');
+    expect(respuesta.status).toBe(403);
+    const datos = await respuesta.json();
+    expect(datos.error).toMatch(/no está disponible/i);
   });
 
   test('dos confirmaciones seguidas devuelven exactamente el mismo pase y jti', async () => {

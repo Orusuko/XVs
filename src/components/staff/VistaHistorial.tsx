@@ -107,7 +107,10 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
       <input
         id="busqueda"
         value={busqueda}
-        onChange={(campo) => setBusqueda(campo.target.value)}
+        onChange={(campo) => {
+          setBusqueda(campo.target.value);
+          setAviso(null);
+        }}
         placeholder="Escribe el apellido"
         className="mt-4 min-h-12 w-full rounded-[2px] border border-papel/25 bg-transparent px-4 text-papel outline-none transition-colors duration-200 focus:border-oro-claro"
       />

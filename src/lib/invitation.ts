@@ -6,12 +6,14 @@ import {
   TEMPLATE_POR_DEFECTO,
   esTemplateId,
 } from '@/lib/templates/catalogo';
+import { eventoAbiertoAInvitados } from '@/lib/invitacion-publica';
 import type { EventRow, FamilyRow, InvitationView } from '@/lib/types';
 
 export type ResultadoInvitacion =
   | { tipo: 'ok'; vista: InvitationView }
   | { tipo: 'no_encontrada' }
-  | { tipo: 'indisponible' };
+  | { tipo: 'indisponible' }
+  | { tipo: 'no_publicado' };
 
 /**
  * Single source of truth for what an invitation link may reveal. Both the page
@@ -72,6 +74,10 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
 
   if (!evento || evento.estado === 'cancelado') return { tipo: 'no_encontrada' };
 
+  if (!eventoAbiertoAInvitados(evento.estado)) {
+    return { tipo: 'no_publicado' };
+  }
+
   const templateConfig = evento.template_config ?? {};
   const plantillaElegida = templateConfig[CLAVE_TEMPLATE_CONFIG];
 
@@ -83,6 +89,7 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
         boletos: familia.boletos_total,
         estado: familia.estado_confirmacion,
         yaEntro: familia.checked_in || (familia.boletos_usados ?? 0) > 0,
+        entradaCompleta: (familia.boletos_usados ?? 0) >= familia.boletos_total,
       },
       evento: {
         quinceanera: evento.quinceanera_nombre,
