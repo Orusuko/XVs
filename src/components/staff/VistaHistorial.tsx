@@ -54,7 +54,9 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
     const datos = await respuesta.json().catch(() => null);
     setAviso(
       respuesta.ok
-        ? 'Entrada revertida. Ese código QR ya no sirve: la familia debe abrir su invitación otra vez.'
+        ? (typeof datos?.mensaje === 'string'
+            ? datos.mensaje
+            : 'Entrada deshecha.')
         : (datos?.error ?? 'No pudimos completar eso. Inténtalo de nuevo.'),
     );
     setTrabajando(null);

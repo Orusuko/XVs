@@ -34,6 +34,18 @@ export async function POST(request: Request) {
   }
 
   const db = supabaseAdmin();
+
+  const { data: antes, error: readError } = await db
+    .from('families')
+    .select('qr_jti')
+    .eq('id', familyId)
+    .eq('event_id', eventId)
+    .maybeSingle<{ qr_jti: string | null }>();
+
+  if (readError || !antes) {
+    return NextResponse.json({ error: 'Familia no encontrada.' }, { status: 404 });
+  }
+
   const { error } = await db
     .from('families')
     .update({
@@ -56,5 +68,14 @@ export async function POST(request: Request) {
     resultado: 'revertido',
   });
 
-  return NextResponse.json({ ok: true });
+  /** `qr_jti` no cambia en el undo: solo se limpia al completar todos los boletos en puerta. */
+  const mismoQr = Boolean(antes.qr_jti);
+
+  return NextResponse.json({
+    ok: true,
+    mismoQr,
+    mensaje: mismoQr
+      ? 'Entrada deshecha. El mismo QR de la familia vuelve a servir.'
+      : 'Entrada deshecha. El pase impreso ya no sirve; la familia debe abrir su invitación en el teléfono para ver un código nuevo.',
+  });
 }

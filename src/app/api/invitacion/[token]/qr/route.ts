@@ -12,8 +12,9 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Re-issues the QR for a family that already confirmed. A live nonce is
- * re-signed so a downloaded PNG stays valid. After check-in (or undo) the
- * nonce is gone — mint a new one so they can walk back in with a fresh pass.
+ * re-signed so a downloaded PNG stays valid. After full check-in the nonce is
+ * cleared — mint a new one on the next fetch. Undo after partial entry keeps the
+ * same nonce; undo after a completed entry still needs a remint here.
  */
 export async function GET(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;

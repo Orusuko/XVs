@@ -213,8 +213,8 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     let { data: actualizadas, error } = await query.select('qr_jti');
 
     if (esColumnaFaltante(error, 'boletos_confirmados')) {
-      const sinColumna = { ...payload };
-      delete sinColumna.boletos_confirmados;
+      const { boletos_confirmados: _sinColumna, ...sinColumna } = payload;
+      void _sinColumna;
       query = db
         .from('families')
         .update(sinColumna)
