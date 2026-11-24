@@ -5,3 +5,10 @@
  */
 export const POLITICA_STAFF_BORRADOR =
   'En borrador solo se bloquean entradas nuevas; Conteo, Historial y Deshacer siguen disponibles.';
+
+/** Aviso junto a Marcar entrada / escáner cuando el evento no está publicado. */
+export const AVISO_PUBLICAR_PARA_ENTRADAS = 'Publica el evento para registrar entradas';
+
+export function staffPuedeRegistrarEntradaNueva(eventoEstado: string): boolean {
+  return eventoEstado === 'publicado';
+}
