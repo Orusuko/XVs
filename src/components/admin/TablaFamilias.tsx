@@ -27,7 +27,8 @@ type Props = {
   siteUrl: string;
   estadoInicial: string;
   capacidadTotal: number | null;
-  errorServidor?: string | null;
+  /** Lista de familias no cargó (p. ej. migración pendiente). */
+  listaBloqueada?: boolean;
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -42,7 +43,7 @@ export function TablaFamilias({
   siteUrl,
   estadoInicial,
   capacidadTotal,
-  errorServidor = null,
+  listaBloqueada = false,
 }: Props) {
   const [familias, setFamilias] = useState<Familia[]>(familiasIniciales);
   const [estado, setEstado] = useState(estadoInicial);
@@ -326,6 +327,39 @@ export function TablaFamilias({
     }
   }
 
+  const modalCambioEstado = (
+    <ModalConfirmacion
+      abierto={modalEstado !== null}
+      titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
+      detalle={
+        modalEstado === 'publicado' ? (
+          'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
+        ) : (
+          <>
+            El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
+            enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
+          </>
+        )
+      }
+      confirmarEtiqueta={
+        publicando
+          ? modalEstado === 'publicado'
+            ? 'Publicando…'
+            : 'Guardando…'
+          : modalEstado === 'publicado'
+            ? 'Publicar'
+            : 'Volver a borrador'
+      }
+      procesando={publicando}
+      onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
+      onCancelar={() => !publicando && setModalEstado(null)}
+    />
+  );
+
+  const toastUi = (
+    <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+  );
+
   const barraPublicacion = (
     <div className="mb-8 flex flex-wrap items-center gap-3">
       {publicado ? (
@@ -333,7 +367,7 @@ export function TablaFamilias({
           <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-exito">
             Publicado
           </span>
-          {primerToken && (
+          {primerToken && !listaBloqueada && (
             <a
               href={`${siteUrl}/invitacion/${primerToken}`}
               target="_blank"
@@ -359,7 +393,12 @@ export function TablaFamilias({
           </span>
           <Boton
             type="button"
-            disabled={publicando || familias.length === 0}
+            disabled={publicando || familias.length === 0 || listaBloqueada}
+            title={
+              listaBloqueada
+                ? 'Aplica la migración de boletos parciales antes de publicar o editar la lista.'
+                : undefined
+            }
             onClick={() => solicitarCambioEstado('publicado')}
           >
             Publicar
@@ -369,11 +408,21 @@ export function TablaFamilias({
     </div>
   );
 
-  if (errorServidor) {
+  if (listaBloqueada) {
     return (
       <section>
         {barraPublicacion}
-        <p className="text-sm text-alerta">{errorServidor}</p>
+        {error && (
+          <p className="mt-3 text-sm text-alerta" role="alert">
+            {error}
+          </p>
+        )}
+        <p className="mt-4 text-sm text-tinta-suave">
+          Mientras falte la migración, la lista no se muestra aquí; puedes seguir volviendo a
+          borrador o editando los datos del evento.
+        </p>
+        {modalCambioEstado}
+        {toastUi}
       </section>
     );
   }
@@ -382,33 +431,8 @@ export function TablaFamilias({
     return (
       <section>
         {barraPublicacion}
-        <ModalConfirmacion
-          abierto={modalEstado !== null}
-          titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
-          detalle={
-            modalEstado === 'publicado' ? (
-              'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
-            ) : (
-              <>
-                El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
-                enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
-              </>
-            )
-          }
-          confirmarEtiqueta={
-            publicando
-              ? modalEstado === 'publicado'
-                ? 'Publicando…'
-                : 'Guardando…'
-              : modalEstado === 'publicado'
-                ? 'Publicar'
-                : 'Volver a borrador'
-          }
-          procesando={publicando}
-          onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
-          onCancelar={() => !publicando && setModalEstado(null)}
-        />
-        <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+        {modalCambioEstado}
+        {toastUi}
         <div className="talon px-5 pb-6 pt-8">
           <div className="space-y-3">
             {borradores.map((fila, indice) => (
@@ -508,33 +532,8 @@ export function TablaFamilias({
   return (
     <section>
       {barraPublicacion}
-      <ModalConfirmacion
-        abierto={modalEstado !== null}
-        titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
-        detalle={
-          modalEstado === 'publicado' ? (
-            'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
-          ) : (
-            <>
-              El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
-              enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
-            </>
-          )
-        }
-        confirmarEtiqueta={
-          publicando
-            ? modalEstado === 'publicado'
-              ? 'Publicando…'
-              : 'Guardando…'
-            : modalEstado === 'publicado'
-              ? 'Publicar'
-              : 'Volver a borrador'
-        }
-        procesando={publicando}
-        onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
-        onCancelar={() => !publicando && setModalEstado(null)}
-      />
-      <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+      {modalCambioEstado}
+      {toastUi}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato etiqueta="Boletos" valor={resumen.total} />

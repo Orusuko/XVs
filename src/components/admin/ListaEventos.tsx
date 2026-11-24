@@ -56,12 +56,15 @@ export function ListaEventos({ eventosIniciales }: Props) {
     <>
       <ul className="mt-8 space-y-3">
         {eventos.map((evento) => (
-          <li key={evento.id} className="talon flex items-center justify-between gap-4 px-6 py-5">
+          <li
+            key={evento.id}
+            className="talon flex min-w-0 items-center justify-between gap-4 px-6 py-5"
+          >
             <Link
               href={`/admin/evento/${evento.id}/invitados`}
-              className="min-h-11 flex-1 cursor-pointer"
+              className="min-h-11 min-w-0 flex-1 cursor-pointer"
             >
-              <span className="break-words font-display text-xl text-tinta">
+              <span className="font-display text-xl text-tinta [overflow-wrap:anywhere]">
                 {evento.quinceanera_nombre}
               </span>
               <span className="mt-1 block font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">

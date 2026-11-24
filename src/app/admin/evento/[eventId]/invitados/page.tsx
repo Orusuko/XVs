@@ -74,7 +74,7 @@ export default async function InvitadosPage({
             siteUrl={siteUrl()}
             estadoInicial={evento.estado}
             capacidadTotal={evento.capacidad_total}
-            errorServidor={errorLista ?? null}
+            listaBloqueada={Boolean(errorLista)}
           />
         </div>
 

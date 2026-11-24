@@ -228,6 +228,13 @@ export function validarCamposEvento(campos: Record<string, unknown>): string | n
     if (fallo) return fallo;
   }
 
+  if ('estado' in campos) {
+    const estado = campos.estado;
+    if (estado !== 'borrador' && estado !== 'publicado' && estado !== 'cancelado') {
+      return 'El estado del evento no es válido.';
+    }
+  }
+
   return null;
 }
 

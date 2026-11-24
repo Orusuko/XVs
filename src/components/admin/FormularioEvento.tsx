@@ -18,6 +18,24 @@ import type { EventRow, Lugar, Padrino } from '@/lib/types';
 
 const LUGAR_VACIO: Lugar = { nombre: '', direccion: '', maps_url: '', fecha_hora: '' };
 
+type CampoFormId = 'quinceanera' | 'foto' | 'misa_maps' | 'recepcion_maps' | 'capacidad';
+
+const ORDEN_ERRORES: CampoFormId[] = [
+  'quinceanera',
+  'foto',
+  'misa_maps',
+  'recepcion_maps',
+  'capacidad',
+];
+
+const ID_FOCUS: Record<CampoFormId, string> = {
+  quinceanera: 'evento-nombre',
+  foto: 'evento-foto',
+  misa_maps: 'misa-maps',
+  recepcion_maps: 'recepcion-maps',
+  capacidad: 'evento-aforo',
+};
+
 type Props = {
   evento?: Pick<
     EventRow,
@@ -63,62 +81,65 @@ export function FormularioEvento({ evento }: Props) {
   const [fotoPreviewRota, setFotoPreviewRota] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [erroresCampo, setErroresCampo] = useState<Partial<Record<CampoFormId, string>>>({});
+  const [toast, setToast] = useState<{ mensaje: string; tono?: 'exito' | 'alerta' } | null>(null);
   const guardandoRef = useRef(false);
 
   const mostrarPreviewFoto = /^https:\/\//.test(fotoUrl.trim()) && !fotoPreviewRota;
 
-  async function guardar(formEvent: React.FormEvent) {
-    formEvent.preventDefault();
-    if (guardandoRef.current) return;
-    guardandoRef.current = true;
-    setGuardando(true);
-    setError(null);
+  function flashToast(mensaje: string, tono: 'exito' | 'alerta' = 'exito') {
+    setToast({ mensaje, tono });
+    window.setTimeout(() => setToast(null), 2800);
+  }
+
+  function enfocarPrimerError(errores: Partial<Record<CampoFormId, string>>) {
+    for (const campo of ORDEN_ERRORES) {
+      if (!errores[campo]) continue;
+      const elemento = document.getElementById(ID_FOCUS[campo]);
+      elemento?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      elemento?.focus();
+      break;
+    }
+  }
+
+  function validarCampos(): Partial<Record<CampoFormId, string>> {
+    const errores: Partial<Record<CampoFormId, string>> = {};
 
     if (quinceanera.trim() === '') {
-      setError('Escribe el nombre de la quinceañera.');
-      guardandoRef.current = false;
-      setGuardando(false);
-      return;
-    }
-    if (quinceanera.trim().length > MAX_NOMBRE) {
-      setError(`El nombre no puede pasar de ${MAX_NOMBRE} caracteres.`);
-      guardandoRef.current = false;
-      setGuardando(false);
-      return;
+      errores.quinceanera = 'Escribe el nombre de la quinceañera.';
+    } else if (quinceanera.trim().length > MAX_NOMBRE) {
+      errores.quinceanera = `El nombre no puede pasar de ${MAX_NOMBRE} caracteres.`;
     }
 
     const falloFoto = validarFotoUrl(fotoUrl);
-    if (falloFoto) {
-      setError(falloFoto);
-      guardandoRef.current = false;
-      setGuardando(false);
-      return;
-    }
+    if (falloFoto) errores.foto = falloFoto;
 
     const falloMapsMisa = validarEnlaceMaps(misa.maps_url);
-    if (falloMapsMisa) {
-      setError(`Misa: ${falloMapsMisa}`);
-      guardandoRef.current = false;
-      setGuardando(false);
-      return;
-    }
+    if (falloMapsMisa) errores.misa_maps = falloMapsMisa;
 
     const falloMapsRecepcion = validarEnlaceMaps(recepcion.maps_url);
-    if (falloMapsRecepcion) {
-      setError(`Recepción: ${falloMapsRecepcion}`);
-      guardandoRef.current = false;
-      setGuardando(false);
+    if (falloMapsRecepcion) errores.recepcion_maps = falloMapsRecepcion;
+
+    const falloCapacidad = validarCapacidad(capacidad);
+    if (falloCapacidad) errores.capacidad = falloCapacidad;
+
+    return errores;
+  }
+
+  async function guardar(formEvent: React.FormEvent) {
+    formEvent.preventDefault();
+    if (guardandoRef.current) return;
+
+    setError(null);
+    const errores = validarCampos();
+    setErroresCampo(errores);
+    if (Object.keys(errores).length > 0) {
+      enfocarPrimerError(errores);
       return;
     }
 
-    const falloCapacidad = validarCapacidad(capacidad);
-    if (falloCapacidad) {
-      setError(falloCapacidad);
-      guardandoRef.current = false;
-      setGuardando(false);
-      return;
-    }
+    guardandoRef.current = true;
+    setGuardando(true);
 
     const cuerpo = {
       id: evento?.id,
@@ -149,48 +170,83 @@ export function FormularioEvento({ evento }: Props) {
       },
     };
 
-    const respuesta = await fetch('/api/events', {
-      method: evento ? 'PATCH' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cuerpo),
-    });
+    try {
+      const respuesta = await fetch('/api/events', {
+        method: evento ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+      });
 
-    const datos = await respuesta.json();
-    guardandoRef.current = false;
-    setGuardando(false);
+      const datos = (await respuesta.json().catch(() => null)) as {
+        error?: string;
+        id?: string;
+      } | null;
 
-    if (!respuesta.ok) {
-      setError(datos.error ?? 'No pudimos guardar los datos.');
-      return;
+      if (!respuesta.ok) {
+        const mensaje = datos?.error ?? 'No pudimos guardar los datos.';
+        setError(mensaje);
+        flashToast(mensaje, 'alerta');
+        document.getElementById('evento-error-servidor')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        return;
+      }
+
+      if (evento?.id) {
+        flashToast('Guardado.');
+        router.refresh();
+        return;
+      }
+
+      if (datos?.id) {
+        router.push(`/admin/evento/${datos.id}/invitados`);
+        router.refresh();
+      }
+    } catch {
+      const mensaje = 'No pudimos conectar. Revisa tu red e inténtalo de nuevo.';
+      setError(mensaje);
+      flashToast(mensaje, 'alerta');
+    } finally {
+      guardandoRef.current = false;
+      setGuardando(false);
     }
-
-    if (evento?.id) {
-      setToast('Guardado.');
-      window.setTimeout(() => setToast(null), 2800);
-      router.refresh();
-      return;
-    }
-
-    router.push(`/admin/evento/${datos.id}/invitados`);
-    router.refresh();
   }
 
   return (
     <form onSubmit={guardar} noValidate className="space-y-10">
       <Seccion titulo="La quinceañera">
         <Campo
+          campoId="evento-nombre"
           etiqueta="Nombre"
           valor={quinceanera}
-          onCambio={setQuinceanera}
+          error={erroresCampo.quinceanera}
+          onCambio={(valor) => {
+            setQuinceanera(valor);
+            if (erroresCampo.quinceanera) {
+              setErroresCampo((prev) => {
+                const { quinceanera: _, ...resto } = prev;
+                return resto;
+              });
+            }
+          }}
           maxLength={MAX_NOMBRE}
         />
         <div>
           <Campo
+            campoId="evento-foto"
             etiqueta="Foto de la quinceañera"
             valor={fotoUrl}
+            error={erroresCampo.foto}
             onCambio={(valor) => {
               setFotoUrl(valor);
               setFotoPreviewRota(false);
+              if (erroresCampo.foto) {
+                setErroresCampo((prev) => {
+                  const { foto: _, ...resto } = prev;
+                  return resto;
+                });
+              }
             }}
             ayuda="Sube la foto a Drive o Imgur, abre la imagen a pantalla completa y pega el enlace que termina en .jpg o .png."
           />
@@ -276,26 +332,68 @@ export function FormularioEvento({ evento }: Props) {
       </Seccion>
 
       <Seccion titulo="Misa">
-        <CamposLugar lugar={misa} onCambio={setMisa} etiquetaNombre="Templo" />
+        <CamposLugar
+          lugar={misa}
+          onCambio={setMisa}
+          etiquetaNombre="Templo"
+          mapsCampoId="misa-maps"
+          errorMaps={erroresCampo.misa_maps}
+          onCorregirMaps={() =>
+            setErroresCampo((prev) => {
+              const { misa_maps: _, ...resto } = prev;
+              return resto;
+            })
+          }
+        />
       </Seccion>
 
       <Seccion titulo="Recepción">
-        <CamposLugar lugar={recepcion} onCambio={setRecepcion} etiquetaNombre="Salón" />
+        <CamposLugar
+          lugar={recepcion}
+          onCambio={setRecepcion}
+          etiquetaNombre="Salón"
+          mapsCampoId="recepcion-maps"
+          errorMaps={erroresCampo.recepcion_maps}
+          onCorregirMaps={() =>
+            setErroresCampo((prev) => {
+              const { recepcion_maps: _, ...resto } = prev;
+              return resto;
+            })
+          }
+        />
         <Campo
+          campoId="evento-aforo"
           etiqueta="Aforo del salón"
           valor={capacidad}
-          onCambio={setCapacidad}
+          error={erroresCampo.capacidad}
+          onCambio={(valor) => {
+            setCapacidad(valor);
+            if (erroresCampo.capacidad) {
+              setErroresCampo((prev) => {
+                const { capacidad: _, ...resto } = prev;
+                return resto;
+              });
+            }
+          }}
           tipo="number"
           ayuda="Sirve para avisar en la entrada cuando el salón se llena."
         />
       </Seccion>
 
-      {error && <p className="text-sm text-alerta">{error}</p>}
+      {error && (
+        <p id="evento-error-servidor" className="text-sm text-alerta" role="alert">
+          {error}
+        </p>
+      )}
 
       <Boton type="submit" disabled={guardando} className="w-full sm:w-auto">
         {guardando ? 'Guardando…' : evento ? 'Guardar' : 'Guardar y continuar'}
       </Boton>
-      <Toast visible={Boolean(toast)} mensaje={toast ?? ''} />
+      <Toast
+        visible={Boolean(toast)}
+        mensaje={toast?.mensaje ?? ''}
+        tono={toast?.tono}
+      />
     </form>
   );
 
@@ -314,10 +412,16 @@ function CamposLugar({
   lugar,
   onCambio,
   etiquetaNombre,
+  mapsCampoId,
+  errorMaps,
+  onCorregirMaps,
 }: {
   lugar: Lugar;
   onCambio: (lugar: Lugar) => void;
   etiquetaNombre: string;
+  mapsCampoId: string;
+  errorMaps?: string;
+  onCorregirMaps: () => void;
 }) {
   return (
     <>
@@ -334,10 +438,15 @@ function CamposLugar({
         onCambio={(valor) => onCambio({ ...lugar, direccion: valor })}
       />
       <Campo
+        campoId={mapsCampoId}
         idPrefijo={etiquetaNombre}
         etiqueta="Enlace de Google Maps"
         valor={lugar.maps_url}
-        onCambio={(valor) => onCambio({ ...lugar, maps_url: valor })}
+        error={errorMaps}
+        onCambio={(valor) => {
+          onCambio({ ...lugar, maps_url: valor });
+          if (errorMaps) onCorregirMaps();
+        }}
         ayuda="En la invitación solo se ve un ícono de ubicación."
       />
       <Campo
@@ -371,7 +480,9 @@ function Campo({
   ayuda,
   placeholder,
   idPrefijo = 'campo',
+  campoId,
   maxLength,
+  error,
 }: {
   etiqueta: string;
   valor: string;
@@ -381,9 +492,12 @@ function Campo({
   ayuda?: string;
   placeholder?: string;
   idPrefijo?: string;
+  campoId?: string;
   maxLength?: number;
+  error?: string;
 }) {
-  const id = `${idPrefijo}-${etiqueta}`.toLowerCase().replace(/\s+/g, '-');
+  const id = campoId ?? `${idPrefijo}-${etiqueta}`.toLowerCase().replace(/\s+/g, '-');
+  const errorId = `${id}-error`;
 
   return (
     <div>
@@ -397,10 +511,19 @@ function Campo({
         maxLength={maxLength}
         placeholder={placeholder}
         value={valor}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
         onChange={(campo) => onCambio(campo.target.value)}
-        className="mt-1 min-h-11 w-full rounded-[2px] border border-borde bg-papel-alto px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
+        className={`mt-1 min-h-11 w-full rounded-[2px] border bg-papel-alto px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino ${
+          error ? 'border-alerta' : 'border-borde'
+        }`}
       />
-      {ayuda && <p className="mt-1 text-xs text-tinta-suave">{ayuda}</p>}
+      {error && (
+        <p id={errorId} className="mt-1 text-sm text-alerta" role="alert">
+          {error}
+        </p>
+      )}
+      {ayuda && !error && <p className="mt-1 text-xs text-tinta-suave">{ayuda}</p>}
     </div>
   );
 }
