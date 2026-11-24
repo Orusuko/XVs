@@ -56,6 +56,8 @@ export function TablaFamilias({
   const [guardando, setGuardando] = useState(false);
   const [publicando, setPublicando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [erroresFilasBorrador, setErroresFilasBorrador] = useState<Record<number, string>>({});
+  const [errorBoletosEdicion, setErrorBoletosEdicion] = useState<string | null>(null);
   const [toast, setToast] = useState<{ mensaje: string; tono: 'exito' | 'alerta' } | null>(null);
   const [modalEstado, setModalEstado] = useState<'publicado' | 'borrador' | null>(null);
   const [familiaAQuitar, setFamiliaAQuitar] = useState<Familia | null>(null);
@@ -126,6 +128,28 @@ export function TablaFamilias({
   const superaAforo =
     capacidadTotal != null && capacidadTotal > 0 && resumen.total > capacidadTotal;
 
+  const advertenciaDuplicados = useMemo(() => {
+    const vistos = new Set<string>();
+    const repetidos = new Set<string>();
+
+    for (const familia of familias) {
+      const clave = familia.nombre_familia.trim().toLowerCase();
+      if (!clave) continue;
+      if (vistos.has(clave)) repetidos.add(familia.nombre_familia.trim());
+      vistos.add(clave);
+    }
+
+    for (const fila of borradores) {
+      const clave = fila.nombre_familia.trim().toLowerCase();
+      if (!clave) continue;
+      if (vistos.has(clave)) repetidos.add(fila.nombre_familia.trim());
+      vistos.add(clave);
+    }
+
+    if (repetidos.size === 0) return null;
+    return `Hay nombres de familia repetidos (${[...repetidos].join(', ')}). Puedes guardar, pero conviene revisarlos.`;
+  }, [familias, borradores]);
+
   function solicitarCambioEstado(nuevoEstado: 'publicado' | 'borrador') {
     if (nuevoEstado === 'publicado' && familias.length === 0) {
       setError('Agrega al menos una familia con boletos antes de publicar.');
@@ -192,6 +216,7 @@ export function TablaFamilias({
 
       setFamiliaAQuitar(null);
       setFamilias((previas) => previas.filter((actual) => actual.id !== familia.id));
+      mostrarToast(`Se quitó a la familia ${familia.nombre_familia}.`);
     } finally {
       quitandoRef.current = false;
       setQuitandoFamilia(false);
@@ -205,6 +230,7 @@ export function TablaFamilias({
       boletos_total: String(familia.boletos_total),
     });
     setError(null);
+    setErrorBoletosEdicion(null);
   }
 
   function cancelarEdicion() {
@@ -217,15 +243,16 @@ export function TablaFamilias({
 
     const boletos = Number(edicion.boletos_total);
     if (edicion.nombre_familia.trim() === '') {
-      setError('Escribe el nombre de la familia.');
+      setErrorBoletosEdicion('Escribe el nombre de la familia.');
       return;
     }
     if (boletos < 1 || !Number.isInteger(boletos)) {
-      setError('Cada familia necesita al menos un boleto.');
+      setErrorBoletosEdicion('Cada familia necesita al menos un boleto.');
       return;
     }
 
     setError(null);
+    setErrorBoletosEdicion(null);
 
     const respuesta = await fetch('/api/families', {
       method: 'PATCH',
@@ -240,7 +267,7 @@ export function TablaFamilias({
     const datos = await respuesta.json().catch(() => null);
 
     if (!respuesta.ok) {
-      setError(datos?.error ?? 'No pudimos guardar los cambios.');
+      setErrorBoletosEdicion(datos?.error ?? 'No pudimos guardar los cambios.');
       return;
     }
 
@@ -255,29 +282,40 @@ export function TablaFamilias({
           : actual,
       ),
     );
+    mostrarToast(`Cambios guardados para ${edicion.nombre_familia.trim()}.`);
     cancelarEdicion();
   }
 
   async function guardarBorradores() {
-    const listas = borradores
-      .filter((fila) => fila.nombre_familia.trim() !== '' && Number(fila.boletos_total) > 0)
-      .map((fila) => ({
-        nombre_familia: fila.nombre_familia.trim(),
-        boletos_total: Number(fila.boletos_total),
-      }));
+    const errores: Record<number, string> = {};
+    const listas: { nombre_familia: string; boletos_total: number }[] = [];
 
-    const omitidasLocal = borradores.filter(
-      (fila) =>
-        fila.nombre_familia.trim() !== '' &&
-        (Number(fila.boletos_total) < 1 || !Number.isInteger(Number(fila.boletos_total))),
-    );
+    borradores.forEach((fila, indice) => {
+      const nombre = fila.nombre_familia.trim();
+      const boletos = Number(fila.boletos_total);
+      const filaVacia = nombre === '' && fila.boletos_total.trim() === '';
+
+      if (filaVacia) return;
+
+      if (nombre === '') {
+        errores[indice] = 'Escribe el nombre de la familia.';
+        return;
+      }
+
+      if (!Number.isInteger(boletos) || boletos < 1) {
+        errores[indice] = 'Cada familia necesita al menos un boleto.';
+        return;
+      }
+
+      listas.push({ nombre_familia: nombre, boletos_total: boletos });
+    });
+
+    setErroresFilasBorrador(errores);
+
+    if (Object.keys(errores).length > 0) return;
 
     if (listas.length === 0) {
-      setError(
-        omitidasLocal.length > 0
-          ? 'Las familias sin boletos válidos no se guardan. Corrige los boletos o quita esas filas.'
-          : 'Agrega al menos una familia con nombre y boletos.',
-      );
+      setError('Agrega al menos una familia con nombre y boletos.');
       return;
     }
 
@@ -320,6 +358,7 @@ export function TablaFamilias({
         })),
       ]);
       setBorradores([{ nombre_familia: '', boletos_total: '' }]);
+      setErroresFilasBorrador({});
       setCapturando(false);
     } finally {
       guardandoRef.current = false;
@@ -336,8 +375,8 @@ export function TablaFamilias({
           'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
         ) : (
           <>
-            El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
-            enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
+            Los enlaces que ya enviaste dejarán de abrir la invitación hasta que vuelvas a publicar
+            el evento. Las familias verán que aún no está disponible.
           </>
         )
       }
@@ -444,48 +483,73 @@ export function TablaFamilias({
         <div className="talon px-5 pb-6 pt-8">
           <div className="space-y-3">
             {borradores.map((fila, indice) => (
-              <div key={indice} className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
-                <div>
-                  <label htmlFor={`familia-${indice}`} className="sr-only">
-                    Nombre de la familia
-                  </label>
-                  <input
-                    id={`familia-${indice}`}
-                    value={fila.nombre_familia}
-                    placeholder="Familia"
-                    maxLength={MAX_NOMBRE}
-                    onChange={(campo) =>
-                      actualizarBorrador(indice, { ...fila, nombre_familia: campo.target.value })
-                    }
-                    className="min-h-11 w-full rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
-                  />
-                </div>
+              <div key={indice} className="space-y-1">
+                <div className="grid gap-3 sm:grid-cols-[1fr_120px_auto]">
+                  <div>
+                    <label htmlFor={`familia-${indice}`} className="sr-only">
+                      Nombre de la familia
+                    </label>
+                    <input
+                      id={`familia-${indice}`}
+                      value={fila.nombre_familia}
+                      placeholder="Familia"
+                      maxLength={MAX_NOMBRE}
+                      onChange={(campo) => {
+                        actualizarBorrador(indice, { ...fila, nombre_familia: campo.target.value });
+                        if (erroresFilasBorrador[indice]) {
+                          setErroresFilasBorrador((prev) => {
+                            const siguientes = { ...prev };
+                            delete siguientes[indice];
+                            return siguientes;
+                          });
+                        }
+                      }}
+                      className={`min-h-11 w-full rounded-[2px] border bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino ${
+                        erroresFilasBorrador[indice] ? 'border-alerta' : 'border-borde'
+                      }`}
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor={`boletos-${indice}`} className="sr-only">
-                    Boletos
-                  </label>
-                  <input
-                    id={`boletos-${indice}`}
-                    type="number"
-                    min={1}
-                    value={fila.boletos_total}
-                    placeholder="Boletos"
-                    onChange={(campo) =>
-                      actualizarBorrador(indice, { ...fila, boletos_total: campo.target.value })
-                    }
-                    className="min-h-11 w-full rounded-[2px] border border-borde bg-papel px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor={`boletos-${indice}`} className="sr-only">
+                      Boletos
+                    </label>
+                    <input
+                      id={`boletos-${indice}`}
+                      type="number"
+                      min={1}
+                      value={fila.boletos_total}
+                      placeholder="Boletos"
+                      onChange={(campo) => {
+                        actualizarBorrador(indice, { ...fila, boletos_total: campo.target.value });
+                        if (erroresFilasBorrador[indice]) {
+                          setErroresFilasBorrador((prev) => {
+                            const siguientes = { ...prev };
+                            delete siguientes[indice];
+                            return siguientes;
+                          });
+                        }
+                      }}
+                      className={`min-h-11 w-full rounded-[2px] border bg-papel px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino ${
+                        erroresFilasBorrador[indice] ? 'border-alerta' : 'border-borde'
+                      }`}
+                    />
+                  </div>
 
-                <Boton
-                  type="button"
-                  variante="texto"
-                  onClick={() => setBorradores(borradores.filter((_, i) => i !== indice))}
-                  disabled={borradores.length === 1}
-                >
-                  Quitar
-                </Boton>
+                  <Boton
+                    type="button"
+                    variante="texto"
+                    onClick={() => setBorradores(borradores.filter((_, i) => i !== indice))}
+                    disabled={borradores.length === 1}
+                  >
+                    Quitar
+                  </Boton>
+                </div>
+                {erroresFilasBorrador[indice] && (
+                  <p className="text-sm text-alerta" role="alert">
+                    {erroresFilasBorrador[indice]}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -507,6 +571,12 @@ export function TablaFamilias({
             </Boton>
           </div>
         </div>
+
+        {advertenciaDuplicados && (
+          <p className="mt-3 text-sm text-tinta-suave" role="note">
+            {advertenciaDuplicados}
+          </p>
+        )}
 
         {error && <p className="mt-3 text-sm text-alerta">{error}</p>}
 
@@ -583,14 +653,22 @@ export function TablaFamilias({
                 <tr key={familia.id} className="border-t border-borde">
                   <td className="py-3 text-tinta">
                     {editando ? (
-                      <input
-                        value={edicion.nombre_familia}
-                        maxLength={MAX_NOMBRE}
-                        onChange={(campo) =>
-                          setEdicion({ ...edicion, nombre_familia: campo.target.value })
-                        }
-                        className="min-h-11 w-full min-w-[140px] rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
-                      />
+                      <div>
+                        <input
+                          value={edicion.nombre_familia}
+                          maxLength={MAX_NOMBRE}
+                          onChange={(campo) => {
+                            setEdicion({ ...edicion, nombre_familia: campo.target.value });
+                            setErrorBoletosEdicion(null);
+                          }}
+                          className="min-h-11 w-full min-w-[140px] rounded-[2px] border border-borde bg-papel px-4 text-tinta outline-none transition-colors duration-200 focus:border-vino"
+                        />
+                        {errorBoletosEdicion && (
+                          <p className="mt-1 text-sm text-alerta" role="alert">
+                            {errorBoletosEdicion}
+                          </p>
+                        )}
+                      </div>
                     ) : (
                       <span className="break-words">{familia.nombre_familia}</span>
                     )}
@@ -601,10 +679,13 @@ export function TablaFamilias({
                         type="number"
                         min={1}
                         value={edicion.boletos_total}
-                        onChange={(campo) =>
-                          setEdicion({ ...edicion, boletos_total: campo.target.value })
-                        }
-                        className="min-h-11 w-24 rounded-[2px] border border-borde bg-papel px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
+                        onChange={(campo) => {
+                          setEdicion({ ...edicion, boletos_total: campo.target.value });
+                          setErrorBoletosEdicion(null);
+                        }}
+                        className={`min-h-11 w-24 rounded-[2px] border bg-papel px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino ${
+                          errorBoletosEdicion ? 'border-alerta' : 'border-borde'
+                        }`}
                       />
                     ) : (
                       familia.boletos_total

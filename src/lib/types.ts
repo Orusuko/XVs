@@ -73,6 +73,7 @@ export type InvitationView = {
     boletos: number;
     estado: EstadoConfirmacion;
     yaEntro?: boolean;
+    entradaCompleta?: boolean;
   };
   evento: {
     quinceanera: string;

@@ -106,7 +106,14 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
           </Boton>
         )}
 
-        {estado !== 'pendiente' && !familia.yaEntro && (
+        {estado !== 'pendiente' && familia.entradaCompleta && (
+          <p className="mt-2 text-sm text-tinta-suave">
+            Ya registraron la entrada de todos los boletos en la puerta; la respuesta ya no se puede
+            cambiar aquí.
+          </p>
+        )}
+
+        {estado !== 'pendiente' && !familia.entradaCompleta && !familia.yaEntro && (
           <>
             <Boton variante="texto" className="mt-2" onClick={() => setPreguntando(true)}>
               Cambiar mi respuesta

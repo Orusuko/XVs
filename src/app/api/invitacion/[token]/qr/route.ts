@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { bloqueoSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
@@ -35,7 +36,16 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
       >
     >();
 
-  if (!familia || familia.estado_confirmacion !== 'confirmado') {
+  if (!familia) {
+    return NextResponse.json({ error: 'Invitación no encontrada.' }, { status: 404 });
+  }
+
+  const bloqueo = await bloqueoSiEventoNoPublico(db, familia.event_id);
+  if (bloqueo) {
+    return NextResponse.json({ error: bloqueo.error }, { status: bloqueo.status });
+  }
+
+  if (familia.estado_confirmacion !== 'confirmado') {
     return NextResponse.json({ error: 'Todavía no hay un boleto para esta familia.' }, { status: 404 });
   }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ERROR_INVITACION_NO_PUBLICADA } from '@/lib/invitacion-publica';
 import { cargarInvitacion } from '@/lib/invitation';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { requestIp } from '@/lib/request-ip';
@@ -20,6 +21,10 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
       { error: 'Invitación temporalmente no disponible.' },
       { status: 503 },
     );
+  }
+
+  if (resultado.tipo === 'no_publicado') {
+    return NextResponse.json({ error: ERROR_INVITACION_NO_PUBLICADA }, { status: 403 });
   }
 
   if (resultado.tipo !== 'ok') {
