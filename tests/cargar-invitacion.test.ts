@@ -6,9 +6,10 @@ const familiaDb = {
   id: 'fam-1',
   event_id: 'ev-1',
   nombre_familia: 'Ramírez',
-  boletos_total: 4,
+  boletos_total: 5,
+  boletos_confirmados: null as number | null,
   boletos_usados: 0,
-  estado_confirmacion: 'pendiente' as const,
+  estado_confirmacion: 'pendiente' as 'pendiente' | 'confirmado' | 'rechazado',
   checked_in: false,
 };
 
@@ -71,6 +72,21 @@ describe('cargarInvitacion', () => {
     expect(resultado.tipo).toBe('ok');
     if (resultado.tipo === 'ok') {
       expect(resultado.vista.familia.nombre).toBe('Ramírez');
+      expect(resultado.vista.familia.boletosTotal).toBe(5);
+      expect(resultado.vista.familia.boletos).toBe(5);
     }
+  });
+
+  test('boletos en vista usa boletos_confirmados cuando existe', async () => {
+    familiaDb.estado_confirmacion = 'confirmado';
+    familiaDb.boletos_confirmados = 2;
+    const resultado = await cargarInvitacion('tok-test');
+    expect(resultado.tipo).toBe('ok');
+    if (resultado.tipo === 'ok') {
+      expect(resultado.vista.familia.boletos).toBe(2);
+      expect(resultado.vista.familia.boletosTotal).toBe(5);
+    }
+    familiaDb.estado_confirmacion = 'pendiente';
+    familiaDb.boletos_confirmados = null;
   });
 });

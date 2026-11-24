@@ -71,7 +71,10 @@ export type CheckinLogRow = {
 export type InvitationView = {
   familia: {
     nombre: string;
+    /** Cupo efectivo en pase y PDF (confirmación parcial o total). */
     boletos: number;
+    /** Máximo de la invitación (selector RSVP). */
+    boletosTotal: number;
     estado: EstadoConfirmacion;
     yaEntro?: boolean;
     entradaCompleta?: boolean;

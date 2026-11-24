@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { esColumnaFaltante, limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { bloqueoSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -26,16 +27,37 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
 
   const db = supabaseAdmin();
 
-  const { data: familia } = await db
+  let { data: familia, error: selectError } = await db
     .from('families')
-    .select('id, event_id, nombre_familia, boletos_total, estado_confirmacion, qr_jti')
+    .select(
+      'id, event_id, nombre_familia, boletos_total, boletos_confirmados, estado_confirmacion, qr_jti',
+    )
     .eq('token', token)
     .maybeSingle<
       Pick<
         FamilyRow,
-        'id' | 'event_id' | 'nombre_familia' | 'boletos_total' | 'estado_confirmacion' | 'qr_jti'
+        | 'id'
+        | 'event_id'
+        | 'nombre_familia'
+        | 'boletos_total'
+        | 'boletos_confirmados'
+        | 'estado_confirmacion'
+        | 'qr_jti'
       >
     >();
+
+  if (esColumnaFaltante(selectError, 'boletos_confirmados')) {
+    ({ data: familia, error: selectError } = await db
+      .from('families')
+      .select('id, event_id, nombre_familia, boletos_total, estado_confirmacion, qr_jti')
+      .eq('token', token)
+      .maybeSingle());
+  }
+
+  if (selectError) {
+    console.error('invitacion.qr.select', selectError.code, selectError.message);
+    return NextResponse.json({ error: 'No pudimos preparar tu pase.' }, { status: 500 });
+  }
 
   if (!familia) {
     return NextResponse.json({ error: 'Invitación no encontrada.' }, { status: 404 });
@@ -79,7 +101,11 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
   });
 
   return NextResponse.json(
-    { qr, familia: familia.nombre_familia, boletos: familia.boletos_total },
+    {
+      qr,
+      familia: familia.nombre_familia,
+      boletos: limiteBoletosFamilia(familia),
+    },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

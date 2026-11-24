@@ -100,7 +100,8 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
     vista: {
       familia: {
         nombre: familia.nombre_familia,
-        boletos: familia.boletos_total,
+        boletos: limiteBoletosFamilia(familia),
+        boletosTotal: familia.boletos_total,
         estado: familia.estado_confirmacion,
         yaEntro: familia.checked_in || (familia.boletos_usados ?? 0) > 0,
         entradaCompleta: (familia.boletos_usados ?? 0) >= limiteBoletosFamilia(familia),
