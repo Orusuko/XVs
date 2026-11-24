@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { limiteBoletosFamilia } from '@/lib/boletos-familia';
+import {
+  AVISO_PUBLICAR_PARA_ENTRADAS,
+  staffPuedeRegistrarEntradaNueva,
+} from '@/lib/checkin/politica-borrador-staff';
 import { useEstadoStaff } from '@/lib/staff-estado';
 import { formatearHora } from '@/lib/format';
 import { EstadoHoja } from '@/components/ui/EstadoHoja';
@@ -28,6 +32,7 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
   }, [estado, busqueda]);
 
   async function marcarEntrada(familyId: string, cantidad: number) {
+    if (estado && !staffPuedeRegistrarEntradaNueva(estado.evento.estado)) return;
     setTrabajando(familyId);
     const respuesta = await fetch('/api/checkin/manual', {
       method: 'POST',
@@ -97,7 +102,8 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
     );
   }
 
-  const eventoBorrador = estado.evento.estado !== 'publicado';
+  const eventoBorrador = !staffPuedeRegistrarEntradaNueva(estado.evento.estado);
+  const entradasBloqueadas = eventoBorrador;
 
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">
@@ -168,13 +174,14 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
                       <select
                         aria-label={`Cuántos boletos entran de ${familia.nombre_familia}`}
                         value={seleccion}
+                        disabled={entradasBloqueadas || trabajando === familia.id}
                         onChange={(e) =>
                           setCantidades((prev) => ({
                             ...prev,
                             [familia.id]: Number(e.target.value),
                           }))
                         }
-                        className="min-h-11 rounded-[2px] border border-papel/25 bg-tinta px-2 font-ticket text-sm text-papel"
+                        className="min-h-11 rounded-[2px] border border-papel/25 bg-tinta px-2 font-ticket text-sm text-papel disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {Array.from({ length: faltan }, (_, idx) => idx + 1).map((n) => (
                           <option key={n} value={n}>
@@ -185,12 +192,18 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
                     )}
                     <button
                       type="button"
-                      disabled={trabajando === familia.id}
+                      disabled={entradasBloqueadas || trabajando === familia.id}
+                      title={entradasBloqueadas ? AVISO_PUBLICAR_PARA_ENTRADAS : undefined}
                       onClick={() => marcarEntrada(familia.id, seleccion)}
-                      className="min-h-11 cursor-pointer rounded-[2px] bg-oro-claro px-4 text-sm font-medium text-tinta transition-colors duration-200 hover:bg-oro disabled:opacity-50"
+                      className="min-h-11 cursor-pointer rounded-[2px] bg-oro-claro px-4 text-sm font-medium text-tinta transition-colors duration-200 hover:bg-oro disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Marcar entrada
                     </button>
+                    {entradasBloqueadas && (
+                      <span className="w-full basis-full text-xs text-papel/60">
+                        {AVISO_PUBLICAR_PARA_ENTRADAS}
+                      </span>
+                    )}
                   </>
                 )}
 
