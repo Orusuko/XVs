@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boton } from '@/components/ui/Boton';
 import { Toast } from '@/components/ui/Toast';
@@ -64,21 +64,26 @@ export function FormularioEvento({ evento }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const guardandoRef = useRef(false);
 
   const mostrarPreviewFoto = /^https:\/\//.test(fotoUrl.trim()) && !fotoPreviewRota;
 
   async function guardar(formEvent: React.FormEvent) {
     formEvent.preventDefault();
+    if (guardandoRef.current) return;
+    guardandoRef.current = true;
     setGuardando(true);
     setError(null);
 
     if (quinceanera.trim() === '') {
       setError('Escribe el nombre de la quinceañera.');
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
     if (quinceanera.trim().length > MAX_NOMBRE) {
       setError(`El nombre no puede pasar de ${MAX_NOMBRE} caracteres.`);
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
@@ -86,6 +91,7 @@ export function FormularioEvento({ evento }: Props) {
     const falloFoto = validarFotoUrl(fotoUrl);
     if (falloFoto) {
       setError(falloFoto);
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
@@ -93,6 +99,7 @@ export function FormularioEvento({ evento }: Props) {
     const falloMapsMisa = validarEnlaceMaps(misa.maps_url);
     if (falloMapsMisa) {
       setError(`Misa: ${falloMapsMisa}`);
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
@@ -100,6 +107,7 @@ export function FormularioEvento({ evento }: Props) {
     const falloMapsRecepcion = validarEnlaceMaps(recepcion.maps_url);
     if (falloMapsRecepcion) {
       setError(`Recepción: ${falloMapsRecepcion}`);
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
@@ -107,6 +115,7 @@ export function FormularioEvento({ evento }: Props) {
     const falloCapacidad = validarCapacidad(capacidad);
     if (falloCapacidad) {
       setError(falloCapacidad);
+      guardandoRef.current = false;
       setGuardando(false);
       return;
     }
@@ -147,6 +156,7 @@ export function FormularioEvento({ evento }: Props) {
     });
 
     const datos = await respuesta.json();
+    guardandoRef.current = false;
     setGuardando(false);
 
     if (!respuesta.ok) {
@@ -206,8 +216,8 @@ export function FormularioEvento({ evento }: Props) {
           placeholder="Formal, no blanco"
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Campo etiqueta="Padre" valor={padre} onCambio={setPadre} />
-          <Campo etiqueta="Madre" valor={madre} onCambio={setMadre} />
+          <Campo etiqueta="Padre" valor={padre} onCambio={setPadre} maxLength={MAX_NOMBRE} />
+          <Campo etiqueta="Madre" valor={madre} onCambio={setMadre} maxLength={MAX_NOMBRE} />
         </div>
       </Seccion>
 
@@ -219,12 +229,14 @@ export function FormularioEvento({ evento }: Props) {
               etiqueta="Nombre"
               valor={padrino.nombre}
               onCambio={(valor) => actualizarPadrino(indice, { ...padrino, nombre: valor })}
+              maxLength={MAX_NOMBRE}
             />
             <Campo
               idPrefijo={`padrino-${indice}`}
               etiqueta="Rol"
               valor={padrino.rol}
               onCambio={(valor) => actualizarPadrino(indice, { ...padrino, rol: valor })}
+              maxLength={MAX_NOMBRE}
               ayuda="Padrino de vals, de ramo…"
             />
             <Boton

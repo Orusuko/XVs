@@ -5,6 +5,7 @@ import {
   MENSAJES_INVITACION,
   PLACEHOLDER_MENSAJES,
 } from '@/lib/mensajes-invitacion';
+import { MAX_MENSAJE } from '@/lib/validacion-formularios';
 
 type Props = {
   valor: string;
@@ -65,6 +66,7 @@ export function SelectorMensaje({
           value={valor}
           onChange={(e) => onCambiarPropio(e.target.value)}
           rows={3}
+          maxLength={MAX_MENSAJE}
           aria-label="Mensaje propio"
           placeholder="Escribe aquí tu mensaje personalizado…"
           className="min-h-24 w-full rounded-[2px] border border-borde bg-papel-alto p-4 font-display text-lg text-tinta outline-none focus:border-vino"

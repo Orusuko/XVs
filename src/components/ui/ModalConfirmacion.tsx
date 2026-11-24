@@ -9,6 +9,7 @@ type Props = {
   detalle: ReactNode;
   confirmarEtiqueta?: string;
   cancelarEtiqueta?: string;
+  procesando?: boolean;
   onConfirmar: () => void;
   onCancelar: () => void;
 };
@@ -19,6 +20,7 @@ export function ModalConfirmacion({
   detalle,
   confirmarEtiqueta = 'Confirmar',
   cancelarEtiqueta = 'Cancelar',
+  procesando = false,
   onConfirmar,
   onCancelar,
 }: Props) {
@@ -53,14 +55,16 @@ export function ModalConfirmacion({
         <div className="mt-6 flex flex-wrap gap-3">
           <Boton
             type="button"
+            disabled={procesando}
             onClick={() => {
+              if (procesando) return;
               confirmoRef.current = true;
               onConfirmar();
             }}
           >
             {confirmarEtiqueta}
           </Boton>
-          <Boton type="button" variante="contorno" onClick={onCancelar}>
+          <Boton type="button" variante="contorno" disabled={procesando} onClick={onCancelar}>
             {cancelarEtiqueta}
           </Boton>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Boton } from '@/components/ui/Boton';
 import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
@@ -18,6 +18,8 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
   const [revocando, setRevocando] = useState<string | null>(null);
   const [accesoARevocar, setAccesoARevocar] = useState<Acceso | null>(null);
+  const creandoRef = useRef(false);
+  const revocandoRef = useRef(false);
 
   const urlEntrada = `${siteUrl}/staff/${eventId}/login`;
 
@@ -57,43 +59,56 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
       return;
     }
 
+    if (creandoRef.current) return;
+    creandoRef.current = true;
     setCreando(true);
 
-    const respuesta = await fetch('/api/staff/pin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, nombre, pin }),
-    });
+    try {
+      const respuesta = await fetch('/api/staff/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, nombre, pin }),
+      });
 
-    const datos = await respuesta.json();
-    setCreando(false);
+      const datos = await respuesta.json();
 
-    if (!respuesta.ok) {
-      setError(datos.error ?? 'No pudimos crear el acceso.');
-      return;
+      if (!respuesta.ok) {
+        setError(datos.error ?? 'No pudimos crear el acceso.');
+        return;
+      }
+
+      setNombre('');
+      setPin('');
+      await cargarAccesos();
+    } finally {
+      creandoRef.current = false;
+      setCreando(false);
     }
-
-    setNombre('');
-    setPin('');
-    await cargarAccesos();
   }
 
   async function revocar(acceso: Acceso) {
-    setAccesoARevocar(null);
+    if (revocandoRef.current) return;
+    revocandoRef.current = true;
     setRevocando(acceso.id);
-    const respuesta = await fetch(
-      `/api/staff/pin?id=${encodeURIComponent(acceso.id)}&eventId=${encodeURIComponent(eventId)}`,
-      { method: 'DELETE' },
-    );
-    setRevocando(null);
 
-    if (!respuesta.ok) {
-      const datos = await respuesta.json().catch(() => null);
-      setError(datos?.error ?? 'No pudimos revocar ese acceso.');
-      return;
+    try {
+      const respuesta = await fetch(
+        `/api/staff/pin?id=${encodeURIComponent(acceso.id)}&eventId=${encodeURIComponent(eventId)}`,
+        { method: 'DELETE' },
+      );
+
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => null);
+        setError(datos?.error ?? 'No pudimos revocar ese acceso.');
+        return;
+      }
+
+      setAccesoARevocar(null);
+      setAccesos((prev) => prev.filter((item) => item.id !== acceso.id));
+    } finally {
+      revocandoRef.current = false;
+      setRevocando(null);
     }
-
-    setAccesos((prev) => prev.filter((item) => item.id !== acceso.id));
   }
 
   return (
@@ -196,9 +211,12 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
             ? `¿Revocar el acceso de ${accesoARevocar.nombre}? Ya no podrá entrar con su PIN.`
             : ''
         }
-        confirmarEtiqueta="Revocar"
+        confirmarEtiqueta={
+          accesoARevocar && revocando === accesoARevocar.id ? 'Revocando…' : 'Revocar'
+        }
+        procesando={Boolean(accesoARevocar && revocando === accesoARevocar.id)}
         onConfirmar={() => accesoARevocar && void revocar(accesoARevocar)}
-        onCancelar={() => setAccesoARevocar(null)}
+        onCancelar={() => !revocando && setAccesoARevocar(null)}
       />
     </section>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 
@@ -19,22 +19,29 @@ export function ListaEventos({ eventosIniciales }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [eventoAEliminar, setEventoAEliminar] = useState<EventoLista | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const eliminandoRef = useRef(false);
 
   async function eliminarEvento(evento: EventoLista) {
+    if (eliminandoRef.current) return;
+    eliminandoRef.current = true;
     setEliminando(true);
     setError(null);
-    const respuesta = await fetch(`/api/events?id=${evento.id}`, { method: 'DELETE' });
 
-    setEliminando(false);
-    setEventoAEliminar(null);
+    try {
+      const respuesta = await fetch(`/api/events?id=${evento.id}`, { method: 'DELETE' });
 
-    if (!respuesta.ok) {
-      const datos = await respuesta.json().catch(() => null);
-      setError(datos?.error ?? 'No pudimos eliminar el evento.');
-      return;
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => null);
+        setError(datos?.error ?? 'No pudimos eliminar el evento.');
+        return;
+      }
+
+      setEventos((previos) => previos.filter((actual) => actual.id !== evento.id));
+      setEventoAEliminar(null);
+    } finally {
+      eliminandoRef.current = false;
+      setEliminando(false);
     }
-
-    setEventos((previos) => previos.filter((actual) => actual.id !== evento.id));
   }
 
   if (eventos.length === 0) {
@@ -90,6 +97,7 @@ export function ListaEventos({ eventosIniciales }: Props) {
             : ''
         }
         confirmarEtiqueta={eliminando ? 'Eliminando…' : 'Eliminar'}
+        procesando={eliminando}
         onConfirmar={() => eventoAEliminar && void eliminarEvento(eventoAEliminar)}
         onCancelar={() => !eliminando && setEventoAEliminar(null)}
       />
