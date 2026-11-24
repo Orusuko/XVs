@@ -36,6 +36,15 @@ const ID_FOCUS: Record<CampoFormId, string> = {
   capacidad: 'evento-aforo',
 };
 
+function quitarErrorCampo(
+  previas: Partial<Record<CampoFormId, string>>,
+  campo: CampoFormId,
+): Partial<Record<CampoFormId, string>> {
+  const siguientes = { ...previas };
+  delete siguientes[campo];
+  return siguientes;
+}
+
 type Props = {
   evento?: Pick<
     EventRow,
@@ -224,10 +233,7 @@ export function FormularioEvento({ evento }: Props) {
           onCambio={(valor) => {
             setQuinceanera(valor);
             if (erroresCampo.quinceanera) {
-              setErroresCampo((prev) => {
-                const { quinceanera: _, ...resto } = prev;
-                return resto;
-              });
+              setErroresCampo((prev) => quitarErrorCampo(prev, 'quinceanera'));
             }
           }}
           maxLength={MAX_NOMBRE}
@@ -242,10 +248,7 @@ export function FormularioEvento({ evento }: Props) {
               setFotoUrl(valor);
               setFotoPreviewRota(false);
               if (erroresCampo.foto) {
-                setErroresCampo((prev) => {
-                  const { foto: _, ...resto } = prev;
-                  return resto;
-                });
+                setErroresCampo((prev) => quitarErrorCampo(prev, 'foto'));
               }
             }}
             ayuda="Sube la foto a Drive o Imgur, abre la imagen a pantalla completa y pega el enlace que termina en .jpg o .png."
@@ -338,12 +341,7 @@ export function FormularioEvento({ evento }: Props) {
           etiquetaNombre="Templo"
           mapsCampoId="misa-maps"
           errorMaps={erroresCampo.misa_maps}
-          onCorregirMaps={() =>
-            setErroresCampo((prev) => {
-              const { misa_maps: _, ...resto } = prev;
-              return resto;
-            })
-          }
+          onCorregirMaps={() => setErroresCampo((prev) => quitarErrorCampo(prev, 'misa_maps'))}
         />
       </Seccion>
 
@@ -354,12 +352,7 @@ export function FormularioEvento({ evento }: Props) {
           etiquetaNombre="Salón"
           mapsCampoId="recepcion-maps"
           errorMaps={erroresCampo.recepcion_maps}
-          onCorregirMaps={() =>
-            setErroresCampo((prev) => {
-              const { recepcion_maps: _, ...resto } = prev;
-              return resto;
-            })
-          }
+          onCorregirMaps={() => setErroresCampo((prev) => quitarErrorCampo(prev, 'recepcion_maps'))}
         />
         <Campo
           campoId="evento-aforo"
@@ -369,10 +362,7 @@ export function FormularioEvento({ evento }: Props) {
           onCambio={(valor) => {
             setCapacidad(valor);
             if (erroresCampo.capacidad) {
-              setErroresCampo((prev) => {
-                const { capacidad: _, ...resto } = prev;
-                return resto;
-              });
+              setErroresCampo((prev) => quitarErrorCampo(prev, 'capacidad'));
             }
           }}
           tipo="number"
