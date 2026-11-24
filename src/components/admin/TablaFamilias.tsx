@@ -360,8 +360,15 @@ export function TablaFamilias({
     <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
   );
 
+  const motivoPublicarDeshabilitado = listaBloqueada
+    ? 'La base de datos aún necesita la migración de boletos parciales antes de publicar.'
+    : familias.length === 0
+      ? 'Agrega al menos una familia con boletos antes de publicar.'
+      : null;
+
   const barraPublicacion = (
-    <div className="mb-8 flex flex-wrap items-center gap-3">
+    <div className="mb-8 flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
       {publicado ? (
         <>
           <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-exito">
@@ -394,16 +401,17 @@ export function TablaFamilias({
           <Boton
             type="button"
             disabled={publicando || familias.length === 0 || listaBloqueada}
-            title={
-              listaBloqueada
-                ? 'Aplica la migración de boletos parciales antes de publicar o editar la lista.'
-                : undefined
-            }
             onClick={() => solicitarCambioEstado('publicado')}
           >
             Publicar
           </Boton>
         </>
+      )}
+      </div>
+      {!publicado && motivoPublicarDeshabilitado && (
+        <p className="text-sm text-tinta-suave" role="note">
+          {motivoPublicarDeshabilitado}
+        </p>
       )}
     </div>
   );
