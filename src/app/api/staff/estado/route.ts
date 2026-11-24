@@ -16,6 +16,8 @@ export const dynamic = 'force-dynamic';
 /**
  * Staff devices are not signed in with Supabase Auth, so they poll this route
  * instead of subscribing to Realtime with the anon key.
+ *
+ * Permitido con evento en borrador (solo lectura). Ver `lib/checkin/politica-borrador-staff.ts`.
  */
 export async function GET(request: Request) {
   const eventId = new URL(request.url).searchParams.get('eventId');
@@ -36,9 +38,9 @@ export async function GET(request: Request) {
     }),
     db
       .from('events')
-      .select('capacidad_total, quinceanera_nombre')
+      .select('capacidad_total, quinceanera_nombre, estado')
       .eq('id', eventId)
-      .maybeSingle<Pick<EventRow, 'capacidad_total' | 'quinceanera_nombre'>>(),
+      .maybeSingle<Pick<EventRow, 'capacidad_total' | 'quinceanera_nombre' | 'estado'>>(),
   ]);
 
   if (familiasRes.error || eventoRes.error) {
@@ -65,6 +67,7 @@ export async function GET(request: Request) {
       evento: {
         quinceanera: eventoRes.data?.quinceanera_nombre ?? '',
         capacidadTotal: eventoRes.data?.capacidad_total ?? null,
+        estado: eventoRes.data?.estado ?? 'borrador',
       },
       resumen: summarizeTickets(familias),
       ingresados: familias.filter((f) => f.boletos_usados > 0 || f.checked_in),

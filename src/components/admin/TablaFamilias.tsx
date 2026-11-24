@@ -5,6 +5,7 @@ import { Boton } from '@/components/ui/Boton';
 import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 import { Toast } from '@/components/ui/Toast';
 import { MAX_NOMBRE } from '@/lib/validacion-formularios';
+import { etiquetaAsistenciaFamilia } from '@/lib/admin/etiqueta-asistencia';
 import { summarizeTickets } from '@/lib/tickets';
 import type { FamilyRow } from '@/lib/types';
 
@@ -30,12 +31,6 @@ type Props = {
   capacidadTotal: number | null;
   /** Lista de familias no cargó (p. ej. migración pendiente). */
   listaBloqueada?: boolean;
-};
-
-const ETIQUETA_ESTADO: Record<string, string> = {
-  pendiente: 'Pendiente',
-  confirmado: 'Confirmado',
-  rechazado: 'No asistirá',
 };
 
 export function TablaFamilias({
@@ -694,7 +689,7 @@ export function TablaFamilias({
                     )}
                   </td>
                   <td className="py-3">
-                    <EstadoAsistencia estado={familia.estado_confirmacion} />
+                    <EstadoAsistencia familia={familia} />
                   </td>
                   <td className="py-3">
                     <div className="flex items-center gap-3">
@@ -818,7 +813,8 @@ function Dato({
   );
 }
 
-function EstadoAsistencia({ estado }: { estado: string }) {
+function EstadoAsistencia({ familia }: { familia: Familia }) {
+  const { estado_confirmacion: estado } = familia;
   const color =
     estado === 'confirmado'
       ? 'text-exito'
@@ -826,10 +822,12 @@ function EstadoAsistencia({ estado }: { estado: string }) {
         ? 'text-alerta'
         : 'text-tinta-suave';
 
+  const etiqueta = etiquetaAsistenciaFamilia(familia);
+
   return (
     <span className={`inline-flex items-center gap-2 ${color}`}>
       <span aria-hidden="true" className="h-2 w-2 rounded-full bg-current" />
-      {ETIQUETA_ESTADO[estado] ?? estado}
+      {etiqueta}
     </span>
   );
 }

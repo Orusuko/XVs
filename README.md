@@ -85,14 +85,14 @@ La sesión es la cookie `xv_org` (httpOnly, SameSite=Lax, Secure en producción)
 
 **Familia.** Abre su enlace, ve la invitación con su nombre, puede guardar el PDF y agendar misa y recepción. Al confirmar, se descarga su pase con QR. Puede cambiar de opinión: cada nuevo "sí" genera un pase nuevo y anula el anterior.
 
-**Personal de puerta.** Entra en `/staff/[eventId]/login` con su PIN. Ve el conteo de boletos con barra de aforo, escanea los códigos y puede buscar por nombre o deshacer una entrada equivocada.
+**Personal de puerta.** Entra en `/staff/[eventId]/login` con su PIN. Ve el conteo de boletos con barra de aforo, escanea los códigos y puede buscar por nombre o deshacer una entrada equivocada. Con el evento en **borrador** no se pueden registrar entradas nuevas (escáner ni manual), pero Conteo, Historial y **Deshacer entrada** siguen activos para consultas y correcciones.
 
 ## Decisiones de seguridad
 
 - El navegador nunca ve la llave `service_role`. Toda operación pública pasa por Route Handlers en el servidor.
 - El QR es un JWT firmado, no un id de familia. Lleva un `jti` que se rota en cada confirmación, así que una foto de un pase anterior deja de servir.
 - El check-in usa una actualización condicionada (`checked_in = false`), de modo que dos puertas escaneando a la vez no pueden contar dos veces la misma familia.
-- Deshacer una entrada parcial deja el mismo QR válido; si ya habían entrado todos los boletos (nonce consumido), la familia debe abrir su invitación para ver un pase nuevo.
+- Deshacer entrada pone a la familia en **0 de N** boletos usados (no se revierte boleto a boleto). El aviso sobre el QR depende de `qr_jti`, no de `checked_in`. Entrada parcial con nonce vivo: mismo QR; entrada completa (nonce consumido): la familia abre su invitación para un pase nuevo.
 - Los endpoints públicos tienen límite de peticiones por IP.
 - RLS está activo. `cuentas`, `checkin_logs` y `staff_users` no están expuestas al cliente. Eventos y familias tampoco: el panel los lee en el servidor con el service role y filtra por el dueño.
 - La sesión del organizador es una cookie httpOnly firmada con `QR_SECRET`. El PIN de puerta sigue siendo otra cookie, `xv_staff`.

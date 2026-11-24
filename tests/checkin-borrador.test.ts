@@ -53,6 +53,12 @@ const { POST: checkinPost } = await import('@/app/api/checkin/route');
 const { POST: manualPost } = await import('@/app/api/checkin/manual/route');
 const { POST: previewPost } = await import('@/app/api/checkin/preview/route');
 
+vi.mock('@/lib/supabase/families-query', () => ({
+  consultarFamiliasEvento: async () => ({ data: [], error: null }),
+}));
+
+const { GET: estadoGet } = await import('@/app/api/staff/estado/route');
+
 describe('check-in con evento en borrador', () => {
   beforeEach(() => {
     resetRateLimitStore();
@@ -82,6 +88,13 @@ describe('check-in con evento en borrador', () => {
       }),
     );
     expect(respuesta.status).toBe(403);
+  });
+
+  test('GET /api/staff/estado sigue disponible en borrador', async () => {
+    const respuesta = await estadoGet(
+      new Request('http://localhost/api/staff/estado?eventId=ev-1'),
+    );
+    expect(respuesta.status).toBe(200);
   });
 
   test('POST /api/checkin/preview responde 403', async () => {
