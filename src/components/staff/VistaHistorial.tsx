@@ -97,8 +97,15 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
     );
   }
 
+  const eventoBorrador = estado.evento.estado !== 'publicado';
+
   return (
     <main className="mx-auto w-full max-w-lg px-5 py-8">
+      {eventoBorrador && (
+        <p className="mb-6 rounded-[2px] border border-oro-claro/40 bg-oro-claro/10 px-4 py-3 text-center text-sm text-oro-claro">
+          Evento en borrador: no se pueden registrar entradas.
+        </p>
+      )}
       <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-oro-claro">
         Búsqueda y correcciones
       </p>
@@ -155,7 +162,9 @@ export function VistaHistorial({ eventId }: { eventId: string }) {
               <div className="flex items-center gap-2">
                 {faltan > 0 && (
                   <>
-                    {faltan > 1 && (
+                    {faltan === 1 ? (
+                      <span className="font-ticket text-sm text-papel/70">Queda 1 boleto</span>
+                    ) : (
                       <select
                         aria-label={`Cuántos boletos entran de ${familia.nombre_familia}`}
                         value={seleccion}

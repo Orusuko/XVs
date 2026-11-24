@@ -18,7 +18,7 @@ export type FamiliaStaff = {
 
 export type EstadoStaff = {
   staff: string;
-  evento: { quinceanera: string; capacidadTotal: number | null };
+  evento: { quinceanera: string; capacidadTotal: number | null; estado: string };
   resumen: TicketSummary;
   ingresados: FamiliaStaff[];
   pendientes: FamiliaStaff[];

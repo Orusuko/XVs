@@ -5,6 +5,7 @@ import { requestIp } from '@/lib/request-ip';
 import { limiteBoletosFamilia } from '@/lib/boletos-familia';
 import { camposEntrada } from '@/lib/checkin/entrada';
 import { verificarQr } from '@/lib/checkin/verificar-qr';
+/** Evento en borrador: bloqueado (entrada nueva). Ver `lib/checkin/politica-borrador-staff.ts`. */
 import { bloqueoCheckinSiEventoNoPublico } from '@/lib/invitacion-evento';
 import { readStaffSession } from '@/lib/staff-session';
 import type { CheckinResultado, FamilyRow } from '@/lib/types';
