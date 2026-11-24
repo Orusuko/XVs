@@ -21,7 +21,7 @@ export function invitacionMuestra(evento: {
   const plantillaElegida = templateConfig[CLAVE_TEMPLATE_CONFIG];
 
   return {
-    familia: { nombre: 'Los Ramírez', boletos: 4, estado: 'pendiente' },
+    familia: { nombre: 'Los Ramírez', boletos: 4, boletosTotal: 4, estado: 'pendiente' },
     evento: {
       quinceanera: evento.quinceanera_nombre,
       padre: evento.padre,

@@ -31,7 +31,10 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
 
     fetch(`/api/invitacion/${token}/qr`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((datos) => datos?.qr && setQr(datos.qr))
+      .then((datos) => {
+        if (datos?.qr) setQr(datos.qr);
+        if (typeof datos?.boletos === 'number') setBoletosPase(datos.boletos);
+      })
       .catch(() => setError('No pudimos cargar tu pase. Revisa tu conexión.'));
   }, [familia.estado, token]);
 
@@ -133,7 +136,7 @@ export function PanelConfirmacion({ token, invitacion }: Props) {
 
       {preguntando && (
         <Dialogo
-          totalBoletos={familia.boletos}
+          totalBoletos={familia.boletosTotal}
           enviando={enviando}
           onCerrar={() => setPreguntando(false)}
           onResponder={responder}
