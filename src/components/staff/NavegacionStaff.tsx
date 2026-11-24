@@ -13,6 +13,8 @@ export function NavegacionStaff({ eventId }: { eventId: string }) {
   const ruta = usePathname();
   const router = useRouter();
 
+  if (ruta.endsWith('/login')) return null;
+
   async function salir() {
     await fetch('/api/staff/logout', { method: 'POST' });
     router.push(`/staff/${eventId}/login`);

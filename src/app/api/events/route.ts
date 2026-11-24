@@ -75,9 +75,30 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Falta el evento.' }, { status: 400 });
   }
 
+  const cambios = soloCamposEditables(body);
+
+  if (cambios.estado === 'publicado') {
+    const { count, error: errCount } = await actual.db
+      .from('families')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', id);
+
+    if (errCount) {
+      console.error('events.publish', errCount.message);
+      return NextResponse.json({ error: 'No pudimos verificar la lista de invitados.' }, { status: 500 });
+    }
+
+    if (!count || count < 1) {
+      return NextResponse.json(
+        { error: 'Agrega al menos una familia con boletos antes de publicar.' },
+        { status: 400 },
+      );
+    }
+  }
+
   const { data, error } = await actual.db
     .from('events')
-    .update(soloCamposEditables(body))
+    .update(cambios)
     .eq('id', id)
     .eq('admin_id', actual.sesion.id)
     .select('id');

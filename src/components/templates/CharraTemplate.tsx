@@ -17,7 +17,7 @@ export function CharraTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <FranjaZarape />
         <header className="surgir surgir-1 py-10 text-center">
           <Herradura className="mx-auto h-16 w-16" />

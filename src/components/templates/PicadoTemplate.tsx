@@ -21,7 +21,7 @@ export function PicadoTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <BannerPicado />
         <header className="surgir surgir-1 py-8 text-center">
           <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">

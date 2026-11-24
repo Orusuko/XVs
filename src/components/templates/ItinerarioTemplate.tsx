@@ -20,7 +20,7 @@ export function ItinerarioTemplate({ token, invitacion, sinConfirmacion }: Props
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1 text-center">
           <p className="font-ticket text-[11px] uppercase tracking-[0.34em] text-oro">
             El día de {evento.quinceanera}

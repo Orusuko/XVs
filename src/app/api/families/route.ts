@@ -97,9 +97,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Agrega al menos una familia.' }, { status: 400 });
   }
 
-  if (!familias.every(validar)) {
+  const conNombre = familias.filter(
+    (fila) =>
+      typeof fila === 'object' &&
+      fila !== null &&
+      typeof (fila as NuevaFamilia).nombre_familia === 'string' &&
+      (fila as NuevaFamilia).nombre_familia.trim() !== '',
+  );
+
+  if (conNombre.length === 0) {
+    return NextResponse.json({ error: 'Agrega al menos una familia con nombre.' }, { status: 400 });
+  }
+
+  const omitidas = familias.filter((fila) => {
+    if (typeof fila !== 'object' || fila === null) return false;
+    const nombre = (fila as NuevaFamilia).nombre_familia;
+    const boletos = (fila as NuevaFamilia).boletos_total;
+    return (
+      typeof nombre === 'string' &&
+      nombre.trim() !== '' &&
+      (typeof boletos !== 'number' || boletos < 1)
+    );
+  });
+
+  const validas = familias.filter(validar);
+
+  if (validas.length === 0) {
     return NextResponse.json(
-      { error: 'Cada familia necesita un nombre y al menos un boleto.' },
+      {
+        error: 'Agrega al menos una familia con nombre y al menos un boleto.',
+        omitidas: omitidas.length,
+      },
       { status: 400 },
     );
   }
@@ -116,7 +144,7 @@ export async function POST(request: Request) {
   }
 
   // 21 URL-safe characters: long enough that guessing a link is not worth trying.
-  const filas = familias.map((familia) => ({
+  const filas = validas.map((familia) => ({
     event_id: eventId,
     nombre_familia: familia.nombre_familia.trim(),
     boletos_total: familia.boletos_total,
@@ -136,7 +164,17 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ familias: data }, { status: 201 });
+  return NextResponse.json(
+    {
+      familias: data,
+      omitidas: omitidas.length,
+      aviso:
+        omitidas.length > 0
+          ? `Se omitieron ${omitidas.length} ${omitidas.length === 1 ? 'familia' : 'familias'} sin boletos válidos.`
+          : undefined,
+    },
+    { status: 201 },
+  );
 }
 
 export async function PATCH(request: Request) {

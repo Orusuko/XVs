@@ -20,7 +20,7 @@ export function DecoTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1">
           <AbanicoDeco className="mx-auto h-16 w-48" />
           <div className="marco-deco mt-4 bg-papel-alto px-6 py-10 text-center">

@@ -6,6 +6,12 @@ import { Boton } from '@/components/ui/Boton';
 import { SelectorMensaje } from '@/components/admin/SelectorMensaje';
 import { MENSAJES_INVITACION, esMensajeCatalogo } from '@/lib/mensajes-invitacion';
 import { CLAVE_FOTO_CONFIG, CLAVE_VESTIMENTA_CONFIG } from '@/lib/templates/catalogo';
+import {
+  MAX_NOMBRE,
+  esFotoUrlValida,
+  normalizarMapsUrl,
+  validarCapacidad,
+} from '@/lib/validacion-formularios';
 import type { EventRow, Lugar, Padrino } from '@/lib/types';
 
 const LUGAR_VACIO: Lugar = { nombre: '', direccion: '', maps_url: '', fecha_hora: '' };
@@ -63,6 +69,30 @@ export function FormularioEvento({ evento }: Props) {
     setGuardando(true);
     setError(null);
 
+    if (quinceanera.trim() === '') {
+      setError('Escribe el nombre de la quinceañera.');
+      setGuardando(false);
+      return;
+    }
+    if (quinceanera.trim().length > MAX_NOMBRE) {
+      setError(`El nombre no puede pasar de ${MAX_NOMBRE} caracteres.`);
+      setGuardando(false);
+      return;
+    }
+
+    if (!esFotoUrlValida(fotoUrl)) {
+      setError('La foto debe ser un enlace https válido (no uses “no-link”).');
+      setGuardando(false);
+      return;
+    }
+
+    const falloCapacidad = validarCapacidad(capacidad);
+    if (falloCapacidad) {
+      setError(falloCapacidad);
+      setGuardando(false);
+      return;
+    }
+
     const cuerpo = {
       id: evento?.id,
       quinceanera_nombre: quinceanera.trim(),
@@ -70,9 +100,19 @@ export function FormularioEvento({ evento }: Props) {
       madre: madre.trim() || null,
       padrinos: padrinos.filter((p) => p.nombre.trim() !== ''),
       mensaje: mensaje.trim() || null,
-      misa: misa.nombre.trim() ? { ...misa, fecha_hora: aIso(misa.fecha_hora) } : null,
+      misa: misa.nombre.trim()
+        ? {
+            ...misa,
+            maps_url: normalizarMapsUrl(misa.maps_url) ?? '',
+            fecha_hora: aIso(misa.fecha_hora),
+          }
+        : null,
       recepcion: recepcion.nombre.trim()
-        ? { ...recepcion, fecha_hora: aIso(recepcion.fecha_hora) }
+        ? {
+            ...recepcion,
+            maps_url: normalizarMapsUrl(recepcion.maps_url) ?? '',
+            fecha_hora: aIso(recepcion.fecha_hora),
+          }
         : null,
       capacidad_total: capacidad ? Number(capacidad) : null,
       template_config: {
@@ -101,9 +141,14 @@ export function FormularioEvento({ evento }: Props) {
   }
 
   return (
-    <form onSubmit={guardar} className="space-y-10">
+    <form onSubmit={guardar} noValidate className="space-y-10">
       <Seccion titulo="La quinceañera">
-        <Campo etiqueta="Nombre" valor={quinceanera} onCambio={setQuinceanera} requerido />
+        <Campo
+          etiqueta="Nombre"
+          valor={quinceanera}
+          onCambio={setQuinceanera}
+          maxLength={MAX_NOMBRE}
+        />
         <div>
           <Campo
             etiqueta="Foto de la quinceañera"
@@ -288,6 +333,7 @@ function Campo({
   ayuda,
   placeholder,
   idPrefijo = 'campo',
+  maxLength,
 }: {
   etiqueta: string;
   valor: string;
@@ -297,6 +343,7 @@ function Campo({
   ayuda?: string;
   placeholder?: string;
   idPrefijo?: string;
+  maxLength?: number;
 }) {
   const id = `${idPrefijo}-${etiqueta}`.toLowerCase().replace(/\s+/g, '-');
 
@@ -309,6 +356,7 @@ function Campo({
         id={id}
         type={tipo}
         required={requerido}
+        maxLength={maxLength}
         placeholder={placeholder}
         value={valor}
         onChange={(campo) => onCambio(campo.target.value)}

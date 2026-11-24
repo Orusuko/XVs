@@ -15,7 +15,7 @@ import type { EventRow, FamilyRow, InvitationView } from '@/lib/types';
 export async function loadInvitation(token: string): Promise<InvitationView | null> {
   const db = supabaseAdmin();
 
-  const { data: familia } = await db
+  const { data: familia, error: errFamilia } = await db
     .from('families')
     .select('id, event_id, nombre_familia, boletos_total, boletos_usados, estado_confirmacion, checked_in')
     .eq('token', token)
@@ -32,9 +32,14 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
       >
     >();
 
+  if (errFamilia) {
+    console.error('invitation.families', errFamilia.message, errFamilia.code);
+    return null;
+  }
+
   if (!familia) return null;
 
-  const { data: evento } = await db
+  const { data: evento, error: errEvento } = await db
     .from('events')
     .select(
       'quinceanera_nombre, padre, madre, padrinos, mensaje, misa, recepcion, template_config, estado',
@@ -54,6 +59,11 @@ export async function loadInvitation(token: string): Promise<InvitationView | nu
         | 'estado'
       >
     >();
+
+  if (errEvento) {
+    console.error('invitation.events', errEvento.message, errEvento.code);
+    return null;
+  }
 
   if (!evento || evento.estado === 'cancelado') return null;
 

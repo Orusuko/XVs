@@ -5,6 +5,13 @@ export const MENSAJES_INVITACION = [
   'Gracias por caminar conmigo hasta aquí. Acompáñame también esa noche.',
 ] as const;
 
+export const ETIQUETAS_MENSAJES: Record<(typeof MENSAJES_INVITACION)[number], string> = {
+  [MENSAJES_INVITACION[0]]: 'Momento especial',
+  [MENSAJES_INVITACION[1]]: 'Ilusión de mis XV',
+  [MENSAJES_INVITACION[2]]: 'Nueva etapa',
+  [MENSAJES_INVITACION[3]]: 'Gratitud',
+};
+
 export function esMensajeCatalogo(texto: string): boolean {
   return (MENSAJES_INVITACION as readonly string[]).includes(texto);
 }

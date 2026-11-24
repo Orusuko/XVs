@@ -1,6 +1,6 @@
 'use client';
 
-import { MENSAJES_INVITACION } from '@/lib/mensajes-invitacion';
+import { ETIQUETAS_MENSAJES, MENSAJES_INVITACION } from '@/lib/mensajes-invitacion';
 
 type Props = {
   valor: string;
@@ -35,7 +35,7 @@ export function SelectorMensaje({
             className={`${TARJETA} ${elegida ? 'border-vino bg-papel-alto' : 'border-borde hover:border-vino'}`}
           >
             <p className="font-ticket text-[10px] uppercase tracking-[0.2em] text-oro">
-              {elegida ? 'Elegido' : 'Mensaje'}
+              {elegida ? 'Elegido' : ETIQUETAS_MENSAJES[texto]}
             </p>
             <p className="mt-2 font-display text-lg leading-relaxed text-tinta">{texto}</p>
           </button>
@@ -61,6 +61,7 @@ export function SelectorMensaje({
           onChange={(e) => onCambiarPropio(e.target.value)}
           rows={3}
           aria-label="Mensaje propio"
+          placeholder="Escribe aquí tu mensaje personalizado…"
           className="min-h-24 w-full rounded-[2px] border border-borde bg-papel-alto p-4 font-display text-lg text-tinta outline-none focus:border-vino"
         />
       )}

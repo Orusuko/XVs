@@ -1,24 +1,61 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Boton } from '@/components/ui/Boton';
+import { validarNombreStaff, validarPinStaff } from '@/lib/validacion-formularios';
+
+type Acceso = { id: string; nombre: string };
 
 /** Door PINs for the night of the event, plus the link the staff will open. */
 export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: string }) {
   const [nombre, setNombre] = useState('');
   const [pin, setPin] = useState('');
   const [creando, setCreando] = useState(false);
-  const [creados, setCreados] = useState<string[]>([]);
+  const [accesos, setAccesos] = useState<Acceso[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+  const [revocando, setRevocando] = useState<string | null>(null);
 
   const urlEntrada = `${siteUrl}/staff/${eventId}/login`;
 
+  const cargarAccesos = useCallback(async () => {
+    const respuesta = await fetch(`/api/staff/pin?eventId=${encodeURIComponent(eventId)}`);
+    if (!respuesta.ok) return;
+    const datos = (await respuesta.json()) as { accesos?: Acceso[] };
+    setAccesos(datos.accesos ?? []);
+  }, [eventId]);
+
+  useEffect(() => {
+    let vivo = true;
+    fetch(`/api/staff/pin?eventId=${encodeURIComponent(eventId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((datos: { accesos?: Acceso[] } | null) => {
+        if (vivo && datos) setAccesos(datos.accesos ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [eventId]);
+
   async function crear(evento: React.FormEvent) {
     evento.preventDefault();
-    setCreando(true);
     setError(null);
+
+    const falloNombre = validarNombreStaff(nombre);
+    if (falloNombre) {
+      setError(falloNombre);
+      return;
+    }
+
+    const falloPin = validarPinStaff(pin);
+    if (falloPin) {
+      setError(falloPin);
+      return;
+    }
+
+    setCreando(true);
 
     const respuesta = await fetch('/api/staff/pin', {
       method: 'POST',
@@ -34,9 +71,30 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
       return;
     }
 
-    setCreados([...creados, nombre]);
     setNombre('');
     setPin('');
+    await cargarAccesos();
+  }
+
+  async function revocar(acceso: Acceso) {
+    if (!window.confirm(`¿Revocar el acceso de ${acceso.nombre}? Ya no podrá entrar con su PIN.`)) {
+      return;
+    }
+
+    setRevocando(acceso.id);
+    const respuesta = await fetch(
+      `/api/staff/pin?id=${encodeURIComponent(acceso.id)}&eventId=${encodeURIComponent(eventId)}`,
+      { method: 'DELETE' },
+    );
+    setRevocando(null);
+
+    if (!respuesta.ok) {
+      const datos = await respuesta.json().catch(() => null);
+      setError(datos?.error ?? 'No pudimos revocar ese acceso.');
+      return;
+    }
+
+    setAccesos((prev) => prev.filter((item) => item.id !== acceso.id));
   }
 
   return (
@@ -50,14 +108,13 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
         vuelve a mostrar.
       </p>
 
-      <form onSubmit={crear} className="mt-6 grid gap-3 sm:grid-cols-[1fr_140px_auto]">
+      <form onSubmit={crear} noValidate className="mt-6 grid gap-3 sm:grid-cols-[1fr_minmax(9rem,140px)_auto]">
         <div>
           <label htmlFor="staff-nombre" className="sr-only">
             Nombre
           </label>
           <input
             id="staff-nombre"
-            required
             value={nombre}
             placeholder="Nombre"
             onChange={(campo) => setNombre(campo.target.value)}
@@ -66,21 +123,19 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
         </div>
 
         <div>
-          <label htmlFor="staff-pin" className="sr-only">
-            PIN
+          <label htmlFor="staff-pin" className="block font-ticket text-[10px] uppercase tracking-[0.2em] text-tinta-suave sm:sr-only">
+            PIN (6–8 dígitos)
           </label>
           <input
             id="staff-pin"
-            required
             inputMode="numeric"
             pattern="\d{6,8}"
             minLength={6}
             maxLength={8}
-            title="Entre 6 y 8 dígitos"
             value={pin}
-            placeholder="PIN (6–8 dígitos)"
+            placeholder="6–8 dígitos"
             onChange={(campo) => setPin(campo.target.value)}
-            className="min-h-11 w-full rounded-[2px] border border-borde bg-papel-alto px-4 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
+            className="min-h-11 w-full min-w-0 rounded-[2px] border border-borde bg-papel-alto px-3 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
           />
         </div>
 
@@ -91,10 +146,22 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
 
       {error && <p className="mt-3 text-sm text-alerta">{error}</p>}
 
-      {creados.length > 0 && (
-        <p className="mt-4 text-sm text-exito">
-          Accesos creados: {creados.join(', ')}.
-        </p>
+      {accesos.length > 0 && (
+        <ul className="mt-6 divide-y divide-borde border border-borde">
+          {accesos.map((acceso) => (
+            <li key={acceso.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <span className="text-tinta">{acceso.nombre}</span>
+              <button
+                type="button"
+                disabled={revocando === acceso.id}
+                onClick={() => void revocar(acceso)}
+                className="min-h-11 cursor-pointer text-sm text-alerta underline underline-offset-4 disabled:opacity-50"
+              >
+                Revocar
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
       <div className="mt-6 space-y-3">

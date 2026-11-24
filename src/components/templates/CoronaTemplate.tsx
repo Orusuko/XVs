@@ -17,7 +17,7 @@ export function CoronaTemplate({ token, invitacion, sinConfirmacion }: Props) {
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <header className="surgir surgir-1 text-center">
           <div className="arco-corona relative mx-auto max-w-md px-8 pb-8 pt-14">
             <Tiara className="absolute left-1/2 top-3 h-8 w-12 -translate-x-1/2" />

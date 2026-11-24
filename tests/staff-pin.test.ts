@@ -40,12 +40,32 @@ describe('POST /api/staff/pin', () => {
     }
   });
 
+  test('rechaza nombre vacío y PIN débil', async () => {
+    const resNombre = await POST(
+      new Request('http://localhost/api/staff/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: 'ev-1', nombre: '   ', pin: '847291' }),
+      }),
+    );
+    expect(resNombre.status).toBe(400);
+
+    const resPin = await POST(
+      new Request('http://localhost/api/staff/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: 'ev-1', nombre: 'Puerta 1', pin: '123456' }),
+      }),
+    );
+    expect(resPin.status).toBe(400);
+  });
+
   test('acepta PIN de 6 dígitos', async () => {
     const res = await POST(
       new Request('http://localhost/api/staff/pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId: 'ev-1', nombre: 'Puerta 1', pin: '123456' }),
+        body: JSON.stringify({ eventId: 'ev-1', nombre: 'Puerta 1', pin: '847291' }),
       }),
     );
     expect(res.status).toBe(201);

@@ -22,7 +22,7 @@ export function MariposasTemplate({ token, invitacion, sinConfirmacion }: Props)
 
   return (
     <main className={`${tema} min-h-screen px-5 py-12`}>
-      <article className="mx-auto w-full max-w-xl">
+      <article className="mx-auto w-full max-w-xl break-words">
         <div className="surgir surgir-1 relative">
           <div className="marco-mariposas relative bg-papel-alto px-6 py-10 text-center">
             {foto && (

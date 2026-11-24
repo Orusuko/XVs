@@ -33,7 +33,7 @@ export function CuerpoInvitacion({
           <p className="font-ticket text-[11px] uppercase tracking-[0.28em] text-tinta-suave">
             Esta invitación es para
           </p>
-          <p className="mt-3 font-display text-3xl text-tinta">Familia {familia.nombre}</p>
+          <p className="mt-3 break-words font-display text-3xl text-tinta">Familia {familia.nombre}</p>
           <p className="mt-2 font-ticket text-sm text-oro">{boletos}</p>
         </section>
       )}
