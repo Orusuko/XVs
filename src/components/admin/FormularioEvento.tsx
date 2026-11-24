@@ -3,14 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Boton } from '@/components/ui/Boton';
+import { Toast } from '@/components/ui/Toast';
 import { SelectorMensaje } from '@/components/admin/SelectorMensaje';
 import { MENSAJES_INVITACION, esMensajeCatalogo } from '@/lib/mensajes-invitacion';
 import { CLAVE_FOTO_CONFIG, CLAVE_VESTIMENTA_CONFIG } from '@/lib/templates/catalogo';
 import {
   MAX_NOMBRE,
-  esFotoUrlValida,
   normalizarMapsUrl,
   validarCapacidad,
+  validarEnlaceMaps,
+  validarFotoUrl,
 } from '@/lib/validacion-formularios';
 import type { EventRow, Lugar, Padrino } from '@/lib/types';
 
@@ -61,6 +63,7 @@ export function FormularioEvento({ evento }: Props) {
   const [fotoPreviewRota, setFotoPreviewRota] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const mostrarPreviewFoto = /^https:\/\//.test(fotoUrl.trim()) && !fotoPreviewRota;
 
@@ -80,8 +83,23 @@ export function FormularioEvento({ evento }: Props) {
       return;
     }
 
-    if (!esFotoUrlValida(fotoUrl)) {
-      setError('La foto debe ser un enlace https válido (no uses “no-link”).');
+    const falloFoto = validarFotoUrl(fotoUrl);
+    if (falloFoto) {
+      setError(falloFoto);
+      setGuardando(false);
+      return;
+    }
+
+    const falloMapsMisa = validarEnlaceMaps(misa.maps_url);
+    if (falloMapsMisa) {
+      setError(`Misa: ${falloMapsMisa}`);
+      setGuardando(false);
+      return;
+    }
+
+    const falloMapsRecepcion = validarEnlaceMaps(recepcion.maps_url);
+    if (falloMapsRecepcion) {
+      setError(`Recepción: ${falloMapsRecepcion}`);
       setGuardando(false);
       return;
     }
@@ -136,7 +154,14 @@ export function FormularioEvento({ evento }: Props) {
       return;
     }
 
-    router.push(`/admin/evento/${evento?.id ?? datos.id}/invitados`);
+    if (evento?.id) {
+      setToast('Guardado.');
+      window.setTimeout(() => setToast(null), 2800);
+      router.refresh();
+      return;
+    }
+
+    router.push(`/admin/evento/${datos.id}/invitados`);
     router.refresh();
   }
 
@@ -256,8 +281,9 @@ export function FormularioEvento({ evento }: Props) {
       {error && <p className="text-sm text-alerta">{error}</p>}
 
       <Boton type="submit" disabled={guardando} className="w-full sm:w-auto">
-        {guardando ? 'Guardando…' : 'Guardar y continuar'}
+        {guardando ? 'Guardando…' : evento ? 'Guardar' : 'Guardar y continuar'}
       </Boton>
+      <Toast visible={Boolean(toast)} mensaje={toast ?? ''} />
     </form>
   );
 

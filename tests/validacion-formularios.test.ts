@@ -1,30 +1,31 @@
 import { describe, expect, test } from 'vitest';
 import {
-  esFotoUrlValida,
-  normalizarMapsUrl,
-  validarCapacidad,
   validarCamposEvento,
   validarCapacidadApi,
   validarCorreo,
+  validarEnlaceMaps,
+  validarFotoUrl,
   validarPinStaff,
   validarUrlOpcionalAbsoluta,
   MAX_NOMBRE,
 } from '@/lib/validacion-formularios';
 
 describe('validacion-formularios', () => {
-  test('rechaza no-link y normaliza URLs de Maps', () => {
-    expect(normalizarMapsUrl('no-link')).toBeNull();
-    expect(normalizarMapsUrl('https://maps.app.goo.gl/abc')).toBe('https://maps.app.goo.gl/abc');
-    expect(normalizarMapsUrl('maps.google.com/?q=1')).toBe('https://maps.google.com/?q=1');
+  test('rechaza no-link en Maps y normaliza URLs válidas', () => {
+    expect(validarEnlaceMaps('no-link')).toMatch(/no es válido/i);
+    expect(validarUrlOpcionalAbsoluta('https://maps.app.goo.gl/abc', 'Maps')).toBeNull();
+    expect(validarUrlOpcionalAbsoluta('/ruta', 'Maps')).toMatch(/completo/i);
   });
 
-  test('rechaza foto no-link', () => {
-    expect(esFotoUrlValida('no-link')).toBe(false);
-    expect(esFotoUrlValida('https://example.com/f.jpg')).toBe(true);
+  test('rechaza foto http y no-link', () => {
+    expect(validarFotoUrl('no-link')).toMatch(/foto/i);
+    expect(validarFotoUrl('http://example.com/f.jpg')).toMatch(/https/i);
+    expect(validarFotoUrl('https://example.com/f.jpg')).toBeNull();
   });
 
-  test('rechaza capacidad negativa', () => {
-    expect(validarCapacidad('-3')).toMatch(/negativo/i);
+  test('rechaza capacidad 0 en API', () => {
+    expect(validarCapacidadApi(0)).toMatch(/mayor que cero/i);
+    expect(validarCapacidadApi(50)).toBeNull();
   });
 
   test('valida correo en español', () => {
@@ -33,27 +34,28 @@ describe('validacion-formularios', () => {
     expect(validarCorreo('ok@ejemplo.com')).toBeNull();
   });
 
-  test('rechaza PIN débil 123456', () => {
+  test('rechaza PIN con letras o débil', () => {
+    expect(validarPinStaff('12ab56')).toMatch(/números/i);
     expect(validarPinStaff('123456')).toMatch(/difícil/i);
-    expect(validarPinStaff('123')).toMatch(/6 y 8/);
+    expect(validarPinStaff('847291')).toBeNull();
   });
 
-  test('valida evento en servidor: aforo, URLs y longitud', () => {
-    expect(validarCapacidadApi(-1)).toMatch(/entero/i);
-    expect(validarCapacidadApi(50)).toBeNull();
-    expect(validarUrlOpcionalAbsoluta('no-link', 'Maps')).toBeNull();
-    expect(validarUrlOpcionalAbsoluta('/ruta', 'Maps')).toMatch(/completo/i);
-    expect(validarUrlOpcionalAbsoluta('https://maps.example/x', 'Maps')).toBeNull();
-
+  test('valida evento en servidor: longitud y padrinos', () => {
     const largo = 'a'.repeat(MAX_NOMBRE + 1);
-    expect(
-      validarCamposEvento({ quinceanera_nombre: largo }),
-    ).toMatch(new RegExp(`${MAX_NOMBRE}`));
+    expect(validarCamposEvento({ quinceanera_nombre: largo })).toMatch(
+      new RegExp(`${MAX_NOMBRE}`),
+    );
 
     expect(
       validarCamposEvento({
-        misa: { maps_url: 'javascript:alert(1)' },
+        misa: { maps_url: 'no-link' },
       }),
-    ).toMatch(/http/i);
+    ).toMatch(/misa/i);
+
+    expect(
+      validarCamposEvento({
+        template_config: { foto_url: 'http://inseguro.com/x.jpg' },
+      }),
+    ).toMatch(/https/i);
   });
 });

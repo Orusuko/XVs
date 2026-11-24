@@ -57,6 +57,7 @@ export function TablaFamilias({
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ mensaje: string; tono: 'exito' | 'alerta' } | null>(null);
   const [modalEstado, setModalEstado] = useState<'publicado' | 'borrador' | null>(null);
+  const [familiaAQuitar, setFamiliaAQuitar] = useState<Familia | null>(null);
 
   const publicado = estado === 'publicado';
   const primerToken = familias[0]?.token;
@@ -129,9 +130,9 @@ export function TablaFamilias({
   }
 
   async function cambiarEstadoEvento(nuevoEstado: 'publicado' | 'borrador') {
-    setModalEstado(null);
     setPublicando(true);
     setError(null);
+    setModalEstado(null);
 
     const respuesta = await fetch('/api/events', {
       method: 'PATCH',
@@ -139,11 +140,13 @@ export function TablaFamilias({
       body: JSON.stringify({ id: eventId, estado: nuevoEstado }),
     });
 
-    const datos = await respuesta.json().catch(() => null);
+    const datos = (await respuesta.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
     setPublicando(false);
 
     if (!respuesta.ok) {
-      setError(datos?.error ?? 'No pudimos actualizar el evento.');
+      const mensaje = datos?.error ?? 'No pudimos actualizar el evento.';
+      setError(mensaje);
+      mostrarToast(mensaje, 'alerta');
       return;
     }
 
@@ -157,9 +160,7 @@ export function TablaFamilias({
   }
 
   async function quitarFamilia(familia: Familia) {
-    const confirma = window.confirm(`¿Quitar a la familia ${familia.nombre_familia} de la lista?`);
-    if (!confirma) return;
-
+    setFamiliaAQuitar(null);
     setError(null);
     const respuesta = await fetch(`/api/families?id=${familia.id}`, { method: 'DELETE' });
 
@@ -448,6 +449,18 @@ export function TablaFamilias({
             </Boton>
           )}
         </div>
+        <ModalConfirmacion
+          abierto={familiaAQuitar !== null}
+          titulo="Quitar familia"
+          detalle={
+            familiaAQuitar
+              ? `¿Quitar a la familia ${familiaAQuitar.nombre_familia} de la lista? Los enlaces que ya compartiste dejarán de funcionar.`
+              : ''
+          }
+          confirmarEtiqueta="Quitar"
+          onConfirmar={() => familiaAQuitar && void quitarFamilia(familiaAQuitar)}
+          onCancelar={() => setFamiliaAQuitar(null)}
+        />
       </section>
     );
   }
@@ -602,7 +615,7 @@ export function TablaFamilias({
                           </button>
                           <button
                             type="button"
-                            onClick={() => quitarFamilia(familia)}
+                            onClick={() => setFamiliaAQuitar(familia)}
                             className="inline-flex h-11 cursor-pointer items-center text-alerta underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
                           >
                             Quitar
@@ -625,6 +638,19 @@ export function TablaFamilias({
           Agregar más familias
         </Boton>
       </div>
+
+      <ModalConfirmacion
+        abierto={familiaAQuitar !== null}
+        titulo="Quitar familia"
+        detalle={
+          familiaAQuitar
+            ? `¿Quitar a la familia ${familiaAQuitar.nombre_familia} de la lista? Los enlaces que ya compartiste dejarán de funcionar.`
+            : ''
+        }
+        confirmarEtiqueta="Quitar"
+        onConfirmar={() => familiaAQuitar && void quitarFamilia(familiaAQuitar)}
+        onCancelar={() => setFamiliaAQuitar(null)}
+      />
     </section>
   );
 

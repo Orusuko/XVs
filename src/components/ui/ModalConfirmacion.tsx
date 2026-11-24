@@ -24,6 +24,7 @@ export function ModalConfirmacion({
 }: Props) {
   const tituloId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const confirmoRef = useRef(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -39,7 +40,10 @@ export function ModalConfirmacion({
       ref={dialogRef}
       aria-labelledby={tituloId}
       className="fixed inset-0 z-50 m-auto w-[min(100%,24rem)] rounded-[2px] border border-borde bg-papel p-0 shadow-lg backdrop:bg-tinta/50 open:flex open:flex-col"
-      onClose={onCancelar}
+      onClose={() => {
+        if (!confirmoRef.current) onCancelar();
+        confirmoRef.current = false;
+      }}
     >
       <div className="px-6 pb-6 pt-8">
         <h2 id={tituloId} className="font-display text-xl text-tinta">
@@ -47,7 +51,13 @@ export function ModalConfirmacion({
         </h2>
         <div className="mt-3 text-sm leading-relaxed text-tinta-suave">{detalle}</div>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Boton type="button" onClick={onConfirmar}>
+          <Boton
+            type="button"
+            onClick={() => {
+              confirmoRef.current = true;
+              onConfirmar();
+            }}
+          >
             {confirmarEtiqueta}
           </Boton>
           <Boton type="button" variante="contorno" onClick={onCancelar}>

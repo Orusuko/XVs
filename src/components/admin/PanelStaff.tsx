@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Boton } from '@/components/ui/Boton';
+import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 import { validarNombreStaff, validarPinStaff } from '@/lib/validacion-formularios';
 
 type Acceso = { id: string; nombre: string };
@@ -16,6 +17,7 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
   const [error, setError] = useState<string | null>(null);
   const [enlaceCopiado, setEnlaceCopiado] = useState(false);
   const [revocando, setRevocando] = useState<string | null>(null);
+  const [accesoARevocar, setAccesoARevocar] = useState<Acceso | null>(null);
 
   const urlEntrada = `${siteUrl}/staff/${eventId}/login`;
 
@@ -77,10 +79,7 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
   }
 
   async function revocar(acceso: Acceso) {
-    if (!window.confirm(`¿Revocar el acceso de ${acceso.nombre}? Ya no podrá entrar con su PIN.`)) {
-      return;
-    }
-
+    setAccesoARevocar(null);
     setRevocando(acceso.id);
     const respuesta = await fetch(
       `/api/staff/pin?id=${encodeURIComponent(acceso.id)}&eventId=${encodeURIComponent(eventId)}`,
@@ -134,7 +133,7 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
             maxLength={8}
             value={pin}
             placeholder="6–8 dígitos"
-            onChange={(campo) => setPin(campo.target.value)}
+            onChange={(campo) => setPin(campo.target.value.replace(/\D/g, '').slice(0, 8))}
             className="min-h-11 w-full min-w-0 rounded-[2px] border border-borde bg-papel-alto px-3 font-ticket text-tinta outline-none transition-colors duration-200 focus:border-vino"
           />
         </div>
@@ -154,7 +153,7 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
               <button
                 type="button"
                 disabled={revocando === acceso.id}
-                onClick={() => void revocar(acceso)}
+                onClick={() => setAccesoARevocar(acceso)}
                 className="min-h-11 cursor-pointer text-sm text-alerta underline underline-offset-4 disabled:opacity-50"
               >
                 Revocar
@@ -188,6 +187,19 @@ export function PanelStaff({ eventId, siteUrl }: { eventId: string; siteUrl: str
         </Boton>
         {enlaceCopiado && <p className="text-sm text-exito">Enlace copiado.</p>}
       </div>
+
+      <ModalConfirmacion
+        abierto={accesoARevocar !== null}
+        titulo="Revocar acceso"
+        detalle={
+          accesoARevocar
+            ? `¿Revocar el acceso de ${accesoARevocar.nombre}? Ya no podrá entrar con su PIN.`
+            : ''
+        }
+        confirmarEtiqueta="Revocar"
+        onConfirmar={() => accesoARevocar && void revocar(accesoARevocar)}
+        onCancelar={() => setAccesoARevocar(null)}
+      />
     </section>
   );
 }

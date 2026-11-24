@@ -1,5 +1,6 @@
 /** Longitud máxima para nombres visibles en la invitación y el panel. */
 export const MAX_NOMBRE = 120;
+export const MAX_MENSAJE = 600;
 
 const PIN_DEBILES = new Set(['123456', '1234567', '12345678', '111111', '000000', '654321']);
 
@@ -13,11 +14,38 @@ export function normalizarMapsUrl(raw: string): string | null {
   return null;
 }
 
-export function esFotoUrlValida(raw: string): boolean {
+export function validarEnlaceMaps(raw: string): string | null {
   const valor = raw.trim();
-  if (valor === '') return true;
-  if (/^no-?link$/i.test(valor)) return false;
-  return /^https:\/\//i.test(valor);
+  if (valor === '') return null;
+  if (/^no-?link$/i.test(valor)) {
+    return 'Ese enlace de Google Maps no es válido. Pega un enlace https de Maps.';
+  }
+  const normalizado = normalizarMapsUrl(valor);
+  if (!normalizado) {
+    return 'El enlace de Google Maps debe ser completo con http:// o https://';
+  }
+  return validarUrlOpcionalAbsoluta(normalizado, 'El enlace de Google Maps');
+}
+
+export function esFotoUrlValida(raw: string): boolean {
+  return validarFotoUrl(raw) === null;
+}
+
+export function validarFotoUrl(raw: string): string | null {
+  const valor = raw.trim();
+  if (valor === '') return null;
+  if (/^no-?link$/i.test(valor)) {
+    return 'Ese enlace de foto no es válido. Usa un enlace https directo a la imagen.';
+  }
+  try {
+    const url = new URL(valor);
+    if (url.protocol !== 'https:') {
+      return 'La foto debe ser un enlace https válido.';
+    }
+  } catch {
+    return 'La foto debe ser un enlace https válido.';
+  }
+  return null;
 }
 
 export function validarCapacidad(valor: string): string | null {
@@ -38,7 +66,10 @@ export function validarCorreo(valor: string): string | null {
 }
 
 export function validarPinStaff(pin: string): string | null {
-  if (pin.length < 6 || pin.length > 8 || !/^\d+$/.test(pin)) {
+  if (!/^\d+$/.test(pin)) {
+    return 'El PIN solo puede incluir números.';
+  }
+  if (pin.length < 6 || pin.length > 8) {
     return 'El PIN debe tener entre 6 y 8 dígitos.';
   }
   if (PIN_DEBILES.has(pin) || /^(.)\1+$/.test(pin)) {
@@ -65,11 +96,23 @@ export function validarLongitudNombre(
   return null;
 }
 
-/** Servidor: null/undefined permitido; entero ≥ 0. */
+function validarTextoOpcional(valor: unknown, etiqueta: string, max: number): string | null {
+  if (valor === null || valor === undefined) return null;
+  if (typeof valor !== 'string') return `${etiqueta} no es válido.`;
+  if (valor.trim().length > max) {
+    return `${etiqueta} no puede pasar de ${max} caracteres.`;
+  }
+  return null;
+}
+
+/** Servidor: null/undefined permitido; entero ≥ 1 o null (0 rechazado, alineado con el formulario). */
 export function validarCapacidadApi(valor: unknown): string | null {
   if (valor === null || valor === undefined) return null;
   if (typeof valor !== 'number' || !Number.isInteger(valor) || valor < 0) {
     return 'El aforo debe ser un número entero mayor o igual a cero.';
+  }
+  if (valor === 0) {
+    return 'El aforo debe ser mayor que cero o déjalo vacío.';
   }
   return null;
 }
@@ -79,7 +122,7 @@ export function validarUrlOpcionalAbsoluta(valor: unknown, etiqueta: string): st
   if (valor === null || valor === undefined) return null;
   if (typeof valor !== 'string') return `${etiqueta} no es válida.`;
   const texto = valor.trim();
-  if (texto === '' || /^no-?link$/i.test(texto)) return null;
+  if (texto === '') return null;
 
   try {
     const url = new URL(texto);
@@ -97,15 +140,38 @@ function validarLugarMaps(lugar: unknown, etiqueta: string): string | null {
   if (lugar === null || lugar === undefined) return null;
   if (typeof lugar !== 'object') return `${etiqueta} no es válido.`;
   const maps = (lugar as { maps_url?: unknown }).maps_url;
-  return validarUrlOpcionalAbsoluta(maps, `El enlace de Google Maps de ${etiqueta}`);
+  if (typeof maps === 'string' && maps.trim() !== '') {
+    const falloTexto = validarEnlaceMaps(maps);
+    if (falloTexto) {
+      return `El enlace de Google Maps de ${etiqueta} no es válido. Pega un enlace https de Maps.`;
+    }
+  }
+  return null;
 }
 
 function validarTemplateConfig(config: unknown): string | null {
   if (config === null || config === undefined) return null;
   if (typeof config !== 'object') return 'La configuración de plantilla no es válida.';
   const foto = (config as Record<string, unknown>).foto_url;
-  const falloFoto = validarUrlOpcionalAbsoluta(foto, 'La foto');
-  if (falloFoto) return falloFoto;
+  if (typeof foto === 'string' && foto.trim() !== '') {
+    const falloFoto = validarFotoUrl(foto);
+    if (falloFoto) return falloFoto;
+  }
+  return null;
+}
+
+function validarPadrinos(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null;
+  if (!Array.isArray(valor)) return 'Los padrinos no son válidos.';
+  for (const fila of valor) {
+    if (typeof fila !== 'object' || fila === null) return 'Cada padrino necesita nombre y rol.';
+    const nombre = (fila as { nombre?: unknown }).nombre;
+    const rol = (fila as { rol?: unknown }).rol;
+    const falloNombre = validarTextoOpcional(nombre, 'El nombre del padrino', MAX_NOMBRE);
+    if (falloNombre) return falloNombre;
+    const falloRol = validarTextoOpcional(rol, 'El rol del padrino', MAX_NOMBRE);
+    if (falloRol) return falloRol;
+  }
   return null;
 }
 
@@ -119,6 +185,26 @@ export function validarCamposEvento(campos: Record<string, unknown>): string | n
       'Escribe el nombre de la quinceañera.',
       'El nombre de la quinceañera',
     );
+    if (fallo) return fallo;
+  }
+
+  if ('padre' in campos) {
+    const fallo = validarTextoOpcional(campos.padre, 'El nombre del padre', MAX_NOMBRE);
+    if (fallo) return fallo;
+  }
+
+  if ('madre' in campos) {
+    const fallo = validarTextoOpcional(campos.madre, 'El nombre de la madre', MAX_NOMBRE);
+    if (fallo) return fallo;
+  }
+
+  if ('mensaje' in campos) {
+    const fallo = validarTextoOpcional(campos.mensaje, 'El mensaje', MAX_MENSAJE);
+    if (fallo) return fallo;
+  }
+
+  if ('padrinos' in campos) {
+    const fallo = validarPadrinos(campos.padrinos);
     if (fallo) return fallo;
   }
 

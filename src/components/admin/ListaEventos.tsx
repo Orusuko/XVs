@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 
 type EventoLista = {
   id: string;
@@ -16,15 +17,16 @@ type Props = {
 export function ListaEventos({ eventosIniciales }: Props) {
   const [eventos, setEventos] = useState(eventosIniciales);
   const [error, setError] = useState<string | null>(null);
+  const [eventoAEliminar, setEventoAEliminar] = useState<EventoLista | null>(null);
+  const [eliminando, setEliminando] = useState(false);
 
   async function eliminarEvento(evento: EventoLista) {
-    const confirma = window.confirm(
-      `¿Eliminar el evento de ${evento.quinceanera_nombre}? Se borrarán las familias, los PIN del staff y el historial de entrada. Esto no se puede deshacer.`,
-    );
-    if (!confirma) return;
-
+    setEliminando(true);
     setError(null);
     const respuesta = await fetch(`/api/events?id=${evento.id}`, { method: 'DELETE' });
+
+    setEliminando(false);
+    setEventoAEliminar(null);
 
     if (!respuesta.ok) {
       const datos = await respuesta.json().catch(() => null);
@@ -52,7 +54,9 @@ export function ListaEventos({ eventosIniciales }: Props) {
               href={`/admin/evento/${evento.id}/invitados`}
               className="min-h-11 flex-1 cursor-pointer"
             >
-              <span className="font-display text-xl text-tinta">{evento.quinceanera_nombre}</span>
+              <span className="break-words font-display text-xl text-tinta">
+                {evento.quinceanera_nombre}
+              </span>
               <span className="mt-1 block font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">
                 {evento.estado === 'publicado' ? 'Publicado' : 'Borrador'}
               </span>
@@ -66,7 +70,7 @@ export function ListaEventos({ eventosIniciales }: Props) {
               </Link>
               <button
                 type="button"
-                onClick={() => eliminarEvento(evento)}
+                onClick={() => setEventoAEliminar(evento)}
                 className="inline-flex min-h-11 cursor-pointer items-center text-alerta underline underline-offset-4 transition-colors duration-200 hover:text-vino-hondo"
               >
                 Eliminar
@@ -76,6 +80,19 @@ export function ListaEventos({ eventosIniciales }: Props) {
         ))}
       </ul>
       {error && <p className="mt-3 text-sm text-alerta">{error}</p>}
+
+      <ModalConfirmacion
+        abierto={eventoAEliminar !== null}
+        titulo="Eliminar evento"
+        detalle={
+          eventoAEliminar
+            ? `¿Eliminar el evento de ${eventoAEliminar.quinceanera_nombre}? Se borrarán las familias, los PIN del staff y el historial de entrada. Esto no se puede deshacer.`
+            : ''
+        }
+        confirmarEtiqueta={eliminando ? 'Eliminando…' : 'Eliminar'}
+        onConfirmar={() => eventoAEliminar && void eliminarEvento(eventoAEliminar)}
+        onCancelar={() => !eliminando && setEventoAEliminar(null)}
+      />
     </>
   );
 }

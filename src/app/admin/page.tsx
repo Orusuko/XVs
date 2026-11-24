@@ -47,7 +47,7 @@ export default async function AdminPage() {
 
         <Link
           href="/admin/evento/nuevo"
-          className="mt-6 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[2px] border border-vino-hondo bg-vino px-5 text-sm font-medium text-papel-alto transition-colors duration-200 hover:bg-vino-hondo"
+          className="mt-6 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[2px] border border-vino-hondo bg-vino px-5 text-sm font-medium tracking-wide text-papel-alto transition-colors duration-200 hover:bg-vino-hondo"
         >
           {hayEventos ? 'Crear otro evento' : 'Crear el evento'}
         </Link>
