@@ -36,25 +36,29 @@ export function SelectorPlantilla({ eventId, nombreQuinceanera, templateConfig, 
     setGuardando(id);
     setError(null);
 
-    const respuesta = await fetch('/api/events', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: eventId,
-        template_config: { ...templateConfig, [CLAVE_TEMPLATE_CONFIG]: id },
-      }),
-    });
+    try {
+      const respuesta = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: eventId,
+          template_config: { ...templateConfig, [CLAVE_TEMPLATE_CONFIG]: id },
+        }),
+      });
 
-    setGuardando(null);
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => ({}));
+        setError(datos.error ?? 'No pudimos guardar la plantilla.');
+        return;
+      }
 
-    if (!respuesta.ok) {
-      const datos = await respuesta.json().catch(() => ({}));
-      setError(datos.error ?? 'No pudimos guardar la plantilla.');
-      return;
+      setElegida(id);
+      router.refresh();
+    } catch {
+      setError('No pudimos conectar. Revisa tu red e inténtalo de nuevo.');
+    } finally {
+      setGuardando(null);
     }
-
-    setElegida(id);
-    router.refresh();
   }
 
   return (

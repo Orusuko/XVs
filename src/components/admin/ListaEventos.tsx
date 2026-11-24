@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 
@@ -19,22 +19,29 @@ export function ListaEventos({ eventosIniciales }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [eventoAEliminar, setEventoAEliminar] = useState<EventoLista | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  const eliminandoRef = useRef(false);
 
   async function eliminarEvento(evento: EventoLista) {
+    if (eliminandoRef.current) return;
+    eliminandoRef.current = true;
     setEliminando(true);
     setError(null);
-    const respuesta = await fetch(`/api/events?id=${evento.id}`, { method: 'DELETE' });
 
-    setEliminando(false);
-    setEventoAEliminar(null);
+    try {
+      const respuesta = await fetch(`/api/events?id=${evento.id}`, { method: 'DELETE' });
 
-    if (!respuesta.ok) {
-      const datos = await respuesta.json().catch(() => null);
-      setError(datos?.error ?? 'No pudimos eliminar el evento.');
-      return;
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => null);
+        setError(datos?.error ?? 'No pudimos eliminar el evento.');
+        return;
+      }
+
+      setEventos((previos) => previos.filter((actual) => actual.id !== evento.id));
+      setEventoAEliminar(null);
+    } finally {
+      eliminandoRef.current = false;
+      setEliminando(false);
     }
-
-    setEventos((previos) => previos.filter((actual) => actual.id !== evento.id));
   }
 
   if (eventos.length === 0) {
@@ -49,12 +56,15 @@ export function ListaEventos({ eventosIniciales }: Props) {
     <>
       <ul className="mt-8 space-y-3">
         {eventos.map((evento) => (
-          <li key={evento.id} className="talon flex items-center justify-between gap-4 px-6 py-5">
+          <li
+            key={evento.id}
+            className="talon flex min-w-0 items-center justify-between gap-4 px-6 py-5"
+          >
             <Link
               href={`/admin/evento/${evento.id}/invitados`}
-              className="min-h-11 flex-1 cursor-pointer"
+              className="min-h-11 min-w-0 flex-1 cursor-pointer"
             >
-              <span className="break-words font-display text-xl text-tinta">
+              <span className="font-display text-xl text-tinta [overflow-wrap:anywhere]">
                 {evento.quinceanera_nombre}
               </span>
               <span className="mt-1 block font-ticket text-[11px] uppercase tracking-[0.2em] text-tinta-suave">
@@ -90,6 +100,7 @@ export function ListaEventos({ eventosIniciales }: Props) {
             : ''
         }
         confirmarEtiqueta={eliminando ? 'Eliminando…' : 'Eliminar'}
+        procesando={eliminando}
         onConfirmar={() => eventoAEliminar && void eliminarEvento(eventoAEliminar)}
         onCancelar={() => !eliminando && setEventoAEliminar(null)}
       />

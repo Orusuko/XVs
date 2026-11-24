@@ -13,10 +13,6 @@ export type ResultadoInvitacion =
   | { tipo: 'no_encontrada' }
   | { tipo: 'indisponible' };
 
-function esErrorColumnaFaltante(codigo: string | undefined): boolean {
-  return codigo === '42703' || codigo === 'PGRST204';
-}
-
 /**
  * Single source of truth for what an invitation link may reveal. Both the page
  * and the JSON route go through here so the two can never drift apart.
@@ -43,8 +39,7 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
 
   if (errFamilia) {
     console.error('invitation.families', errFamilia.message, errFamilia.code);
-    if (esErrorColumnaFaltante(errFamilia.code)) return { tipo: 'indisponible' };
-    return { tipo: 'no_encontrada' };
+    return { tipo: 'indisponible' };
   }
 
   if (!familia) return { tipo: 'no_encontrada' };
@@ -72,8 +67,7 @@ export async function cargarInvitacion(token: string): Promise<ResultadoInvitaci
 
   if (errEvento) {
     console.error('invitation.events', errEvento.message, errEvento.code);
-    if (esErrorColumnaFaltante(errEvento.code)) return { tipo: 'indisponible' };
-    return { tipo: 'no_encontrada' };
+    return { tipo: 'indisponible' };
   }
 
   if (!evento || evento.estado === 'cancelado') return { tipo: 'no_encontrada' };

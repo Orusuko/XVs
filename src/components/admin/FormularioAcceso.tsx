@@ -42,22 +42,27 @@ export function FormularioAcceso() {
     else setCreando(true);
     setError(null);
 
-    const respuesta = await fetch('/api/cuenta', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accion, email: correo.trim(), password: contrasena }),
-    });
+    try {
+      const respuesta = await fetch('/api/cuenta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion, email: correo.trim(), password: contrasena }),
+      });
 
-    const datos = await respuesta.json().catch(() => null);
-    setEnviando(false);
-    setCreando(false);
+      const datos = await respuesta.json().catch(() => null);
 
-    if (!respuesta.ok) {
-      setError(datos?.error ?? 'No pudimos completar el acceso.');
-      return;
+      if (!respuesta.ok) {
+        setError(datos?.error ?? 'No pudimos completar el acceso.');
+        return;
+      }
+
+      irAlPanel();
+    } catch {
+      setError('No pudimos conectar. Revisa tu red e inténtalo de nuevo.');
+    } finally {
+      setEnviando(false);
+      setCreando(false);
     }
-
-    irAlPanel();
   }
 
   function entrar(evento: FormEvent) {

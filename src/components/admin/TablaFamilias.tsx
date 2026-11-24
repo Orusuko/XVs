@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Boton } from '@/components/ui/Boton';
 import { ModalConfirmacion } from '@/components/ui/ModalConfirmacion';
 import { Toast } from '@/components/ui/Toast';
@@ -27,7 +27,8 @@ type Props = {
   siteUrl: string;
   estadoInicial: string;
   capacidadTotal: number | null;
-  errorServidor?: string | null;
+  /** Lista de familias no cargó (p. ej. migración pendiente). */
+  listaBloqueada?: boolean;
 };
 
 const ETIQUETA_ESTADO: Record<string, string> = {
@@ -42,7 +43,7 @@ export function TablaFamilias({
   siteUrl,
   estadoInicial,
   capacidadTotal,
-  errorServidor = null,
+  listaBloqueada = false,
 }: Props) {
   const [familias, setFamilias] = useState<Familia[]>(familiasIniciales);
   const [estado, setEstado] = useState(estadoInicial);
@@ -58,6 +59,10 @@ export function TablaFamilias({
   const [toast, setToast] = useState<{ mensaje: string; tono: 'exito' | 'alerta' } | null>(null);
   const [modalEstado, setModalEstado] = useState<'publicado' | 'borrador' | null>(null);
   const [familiaAQuitar, setFamiliaAQuitar] = useState<Familia | null>(null);
+  const [quitandoFamilia, setQuitandoFamilia] = useState(false);
+  const publicandoRef = useRef(false);
+  const guardandoRef = useRef(false);
+  const quitandoRef = useRef(false);
 
   const publicado = estado === 'publicado';
   const primerToken = familias[0]?.token;
@@ -130,28 +135,39 @@ export function TablaFamilias({
   }
 
   async function cambiarEstadoEvento(nuevoEstado: 'publicado' | 'borrador') {
+    if (publicandoRef.current) return;
+    publicandoRef.current = true;
     setPublicando(true);
     setError(null);
-    setModalEstado(null);
 
-    const respuesta = await fetch('/api/events', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: eventId, estado: nuevoEstado }),
-    });
+    try {
+      const respuesta = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: eventId, estado: nuevoEstado }),
+      });
 
-    const datos = (await respuesta.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-    setPublicando(false);
+      const datos = (await respuesta.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+      } | null;
 
-    if (!respuesta.ok) {
-      const mensaje = datos?.error ?? 'No pudimos actualizar el evento.';
-      setError(mensaje);
-      mostrarToast(mensaje, 'alerta');
-      return;
+      if (!respuesta.ok) {
+        const mensaje = datos?.error ?? 'No pudimos actualizar el evento.';
+        setError(mensaje);
+        mostrarToast(mensaje, 'alerta');
+        return;
+      }
+
+      setModalEstado(null);
+      setEstado(nuevoEstado);
+      mostrarToast(
+        nuevoEstado === 'publicado' ? 'Evento publicado.' : 'Volviste el evento a borrador.',
+      );
+    } finally {
+      publicandoRef.current = false;
+      setPublicando(false);
     }
-
-    setEstado(nuevoEstado);
-    mostrarToast(nuevoEstado === 'publicado' ? 'Evento publicado.' : 'Volviste el evento a borrador.');
   }
 
   function mostrarToast(mensaje: string, tono: 'exito' | 'alerta' = 'exito') {
@@ -160,17 +176,26 @@ export function TablaFamilias({
   }
 
   async function quitarFamilia(familia: Familia) {
-    setFamiliaAQuitar(null);
+    if (quitandoRef.current) return;
+    quitandoRef.current = true;
+    setQuitandoFamilia(true);
     setError(null);
-    const respuesta = await fetch(`/api/families?id=${familia.id}`, { method: 'DELETE' });
 
-    if (!respuesta.ok) {
-      const datos = await respuesta.json().catch(() => null);
-      setError(datos?.error ?? 'No pudimos quitar a esa familia.');
-      return;
+    try {
+      const respuesta = await fetch(`/api/families?id=${familia.id}`, { method: 'DELETE' });
+
+      if (!respuesta.ok) {
+        const datos = await respuesta.json().catch(() => null);
+        setError(datos?.error ?? 'No pudimos quitar a esa familia.');
+        return;
+      }
+
+      setFamiliaAQuitar(null);
+      setFamilias((previas) => previas.filter((actual) => actual.id !== familia.id));
+    } finally {
+      quitandoRef.current = false;
+      setQuitandoFamilia(false);
     }
-
-    setFamilias((previas) => previas.filter((actual) => actual.id !== familia.id));
   }
 
   function iniciarEdicion(familia: Familia) {
@@ -256,45 +281,84 @@ export function TablaFamilias({
       return;
     }
 
+    if (guardandoRef.current) return;
+    guardandoRef.current = true;
     setGuardando(true);
     setError(null);
 
-    const respuesta = await fetch('/api/families', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventId, familias: listas }),
-    });
+    try {
+      const respuesta = await fetch('/api/families', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, familias: listas }),
+      });
 
-    const datos = await respuesta.json();
-    setGuardando(false);
+      const datos = await respuesta.json();
 
-    if (!respuesta.ok) {
-      setError(datos.error ?? 'No pudimos guardar la lista.');
-      mostrarToast(datos.error ?? 'No pudimos guardar la lista.', 'alerta');
-      return;
+      if (!respuesta.ok) {
+        setError(datos.error ?? 'No pudimos guardar la lista.');
+        mostrarToast(datos.error ?? 'No pudimos guardar la lista.', 'alerta');
+        return;
+      }
+
+      if (datos.aviso) {
+        mostrarToast(datos.aviso, 'alerta');
+      } else {
+        mostrarToast('Lista guardada.');
+      }
+
+      setFamilias([
+        ...familias,
+        ...datos.familias.map((familia: { id: string; token: string; nombre_familia: string }) => ({
+          ...familia,
+          boletos_total:
+            listas.find((lista) => lista.nombre_familia === familia.nombre_familia)?.boletos_total ??
+            0,
+          boletos_usados: 0,
+          estado_confirmacion: 'pendiente' as const,
+          checked_in: false,
+        })),
+      ]);
+      setBorradores([{ nombre_familia: '', boletos_total: '' }]);
+      setCapturando(false);
+    } finally {
+      guardandoRef.current = false;
+      setGuardando(false);
     }
-
-    if (datos.aviso) {
-      mostrarToast(datos.aviso, 'alerta');
-    } else {
-      mostrarToast('Lista guardada.');
-    }
-
-    setFamilias([
-      ...familias,
-      ...datos.familias.map((familia: { id: string; token: string; nombre_familia: string }) => ({
-        ...familia,
-        boletos_total:
-          listas.find((lista) => lista.nombre_familia === familia.nombre_familia)?.boletos_total ??
-          0,
-        boletos_usados: 0,
-        estado_confirmacion: 'pendiente' as const,
-        checked_in: false,
-      })),
-    ]);
-    setBorradores([{ nombre_familia: '', boletos_total: '' }]);
-    setCapturando(false);
   }
+
+  const modalCambioEstado = (
+    <ModalConfirmacion
+      abierto={modalEstado !== null}
+      titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
+      detalle={
+        modalEstado === 'publicado' ? (
+          'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
+        ) : (
+          <>
+            El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
+            enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
+          </>
+        )
+      }
+      confirmarEtiqueta={
+        publicando
+          ? modalEstado === 'publicado'
+            ? 'Publicando…'
+            : 'Guardando…'
+          : modalEstado === 'publicado'
+            ? 'Publicar'
+            : 'Volver a borrador'
+      }
+      procesando={publicando}
+      onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
+      onCancelar={() => !publicando && setModalEstado(null)}
+    />
+  );
+
+  const toastUi = (
+    <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+  );
 
   const barraPublicacion = (
     <div className="mb-8 flex flex-wrap items-center gap-3">
@@ -303,7 +367,7 @@ export function TablaFamilias({
           <span className="font-ticket text-[11px] uppercase tracking-[0.2em] text-exito">
             Publicado
           </span>
-          {primerToken && (
+          {primerToken && !listaBloqueada && (
             <a
               href={`${siteUrl}/invitacion/${primerToken}`}
               target="_blank"
@@ -329,7 +393,12 @@ export function TablaFamilias({
           </span>
           <Boton
             type="button"
-            disabled={publicando || familias.length === 0}
+            disabled={publicando || familias.length === 0 || listaBloqueada}
+            title={
+              listaBloqueada
+                ? 'Aplica la migración de boletos parciales antes de publicar o editar la lista.'
+                : undefined
+            }
             onClick={() => solicitarCambioEstado('publicado')}
           >
             Publicar
@@ -339,11 +408,21 @@ export function TablaFamilias({
     </div>
   );
 
-  if (errorServidor) {
+  if (listaBloqueada) {
     return (
       <section>
         {barraPublicacion}
-        <p className="text-sm text-alerta">{errorServidor}</p>
+        {error && (
+          <p className="mt-3 text-sm text-alerta" role="alert">
+            {error}
+          </p>
+        )}
+        <p className="mt-4 text-sm text-tinta-suave">
+          Mientras falte la migración, la lista no se muestra aquí; puedes seguir volviendo a
+          borrador o editando los datos del evento.
+        </p>
+        {modalCambioEstado}
+        {toastUi}
       </section>
     );
   }
@@ -352,24 +431,8 @@ export function TablaFamilias({
     return (
       <section>
         {barraPublicacion}
-        <ModalConfirmacion
-          abierto={modalEstado !== null}
-          titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
-          detalle={
-            modalEstado === 'publicado' ? (
-              'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
-            ) : (
-              <>
-                El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
-                enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
-              </>
-            )
-          }
-          confirmarEtiqueta={modalEstado === 'publicado' ? 'Publicar' : 'Volver a borrador'}
-          onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
-          onCancelar={() => setModalEstado(null)}
-        />
-        <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+        {modalCambioEstado}
+        {toastUi}
         <div className="talon px-5 pb-6 pt-8">
           <div className="space-y-3">
             {borradores.map((fila, indice) => (
@@ -457,9 +520,10 @@ export function TablaFamilias({
               ? `¿Quitar a la familia ${familiaAQuitar.nombre_familia} de la lista? Los enlaces que ya compartiste dejarán de funcionar.`
               : ''
           }
-          confirmarEtiqueta="Quitar"
+          confirmarEtiqueta={quitandoFamilia ? 'Quitando…' : 'Quitar'}
+          procesando={quitandoFamilia}
           onConfirmar={() => familiaAQuitar && void quitarFamilia(familiaAQuitar)}
-          onCancelar={() => setFamiliaAQuitar(null)}
+          onCancelar={() => !quitandoFamilia && setFamiliaAQuitar(null)}
         />
       </section>
     );
@@ -468,24 +532,8 @@ export function TablaFamilias({
   return (
     <section>
       {barraPublicacion}
-      <ModalConfirmacion
-        abierto={modalEstado !== null}
-        titulo={modalEstado === 'publicado' ? 'Publicar invitaciones' : 'Volver a borrador'}
-        detalle={
-          modalEstado === 'publicado' ? (
-            'Las familias podrán abrir su enlace y confirmar asistencia. Los enlaces que ya compartiste seguirán sirviendo.'
-          ) : (
-            <>
-              El evento dejará de mostrarse como publicado en el panel, pero los enlaces que ya
-              enviaste por WhatsApp <strong>siguen abriendo</strong> la invitación.
-            </>
-          )
-        }
-        confirmarEtiqueta={modalEstado === 'publicado' ? 'Publicar' : 'Volver a borrador'}
-        onConfirmar={() => modalEstado && void cambiarEstadoEvento(modalEstado)}
-        onCancelar={() => setModalEstado(null)}
-      />
-      <Toast visible={Boolean(toast)} mensaje={toast?.mensaje ?? ''} tono={toast?.tono} />
+      {modalCambioEstado}
+      {toastUi}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Dato etiqueta="Boletos" valor={resumen.total} />
@@ -647,9 +695,10 @@ export function TablaFamilias({
             ? `¿Quitar a la familia ${familiaAQuitar.nombre_familia} de la lista? Los enlaces que ya compartiste dejarán de funcionar.`
             : ''
         }
-        confirmarEtiqueta="Quitar"
+        confirmarEtiqueta={quitandoFamilia ? 'Quitando…' : 'Quitar'}
+        procesando={quitandoFamilia}
         onConfirmar={() => familiaAQuitar && void quitarFamilia(familiaAQuitar)}
-        onCancelar={() => setFamiliaAQuitar(null)}
+        onCancelar={() => !quitandoFamilia && setFamiliaAQuitar(null)}
       />
     </section>
   );
